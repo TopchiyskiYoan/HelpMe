@@ -1,0 +1,31 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+*.log
+appsettings.Development.json
+
+# EF Migrations (keep the files, ignore generated snapshots only if desired)
+# Uncomment below only if you don't want to commit migrations:
+# **/Migrations/
+
+# Node / React
+helpme-frontend/node_modules/
+helpme-frontend/dist/
+helpme-frontend/.env
+helpme-frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rider / JetBrains
+.idea/
+
+# VSCode
+.vscode/
+!.vscode/extensions.json
+
