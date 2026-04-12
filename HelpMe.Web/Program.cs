@@ -89,8 +89,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // Services
 builder.Services.AddScoped<IUserService, UserService>();
-
-// TODO Phase 1.3: Register ITokenService
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
