@@ -28,6 +28,7 @@ public class AuthController : ControllerBase
             {
                 "EMAIL_EXISTS" => Conflict(new { message = "Email already in use." }),
                 "INVALID_ROLE" => BadRequest(new { message = "Invalid role. Use 'Client' or 'Handyman'." }),
+                "INVALID_PHONE" => BadRequest(new { message = "Invalid phone number. Use 08XXXXXXXX or +359XXXXXXXXX." }),
                 _ => BadRequest(new { message = "Registration failed." })
             };
         }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using HelpMe.Application.DTOs;
 using HelpMe.Application.Interfaces;
 using HelpMe.Domain.Entities;
@@ -28,6 +29,9 @@ public class AuthService : IAuthService
 
         if (!await _roleManager.RoleExistsAsync(dto.Role))
             return AuthResult.Fail("INVALID_ROLE");
+
+        if (!Regex.IsMatch(dto.PhoneNumber, @"^(08\d{8}|\+359\d{9})$"))
+            return AuthResult.Fail("INVALID_PHONE");
 
         var user = new ApplicationUser
         {

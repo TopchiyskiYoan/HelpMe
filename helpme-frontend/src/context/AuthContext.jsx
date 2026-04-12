@@ -1,10 +1,23 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
+import { api } from '../services/api.js'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [loading, setLoading] = useState(!!localStorage.getItem('token'))
+
+  useEffect(() => {
+    if (!token) { setLoading(false); return }
+    api.get('/auth/me')
+      .then(setUser)
+      .catch(() => {
+        localStorage.removeItem('token')
+        setToken(null)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const login = (userData, jwtToken) => {
     setUser(userData)
@@ -19,7 +32,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )
