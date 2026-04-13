@@ -25,11 +25,14 @@ Thumbs.db
 # Rider / JetBrains
 .idea/
 
-# Claude Code / Cursor (local dev tools — not part of project)
+
 .claude/
-.cursor/
+
 
 # VSCode
 .vscode/
 !.vscode/extensions.json
+
+# Local docs (seed data, design files — not part of source)
+docs/
 
