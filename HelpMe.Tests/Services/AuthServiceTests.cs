@@ -101,6 +101,28 @@ public class AuthServiceTests
         Assert.That(result.ErrorCode, Is.EqualTo("INVALID_ROLE"));
     }
 
+    [Test]
+    public async Task RegisterAsync_WithAdministratorRole_ReturnsInvalidRoleError()
+    {
+        var dto = new RegisterDto
+        {
+            Email = "bad@test.bg",
+            Role = "Administrator",
+            FirstName = "X",
+            LastName = "Y",
+            PhoneNumber = "0888123456",
+            Password = "Test1234!"
+        };
+
+        _userManagerMock.Setup(m => m.FindByEmailAsync(dto.Email))
+            .ReturnsAsync((ApplicationUser?)null);
+
+        var result = await _authService.RegisterAsync(dto);
+
+        Assert.That(result.Succeeded, Is.False);
+        Assert.That(result.ErrorCode, Is.EqualTo("INVALID_ROLE"));
+    }
+
     // --- LoginAsync ---
 
     [Test]

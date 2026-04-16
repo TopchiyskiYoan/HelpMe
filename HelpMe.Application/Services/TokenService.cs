@@ -21,6 +21,10 @@ public class TokenService : ITokenService
     {
         var jwtKey = _configuration["Jwt:Key"]
             ?? throw new InvalidOperationException("JWT Key is not configured.");
+        var issuer = _configuration["Jwt:Issuer"]
+            ?? throw new InvalidOperationException("JWT Issuer is not configured.");
+        var audience = _configuration["Jwt:Audience"]
+            ?? throw new InvalidOperationException("JWT Audience is not configured.");
 
         var claims = new List<Claim>
         {
@@ -39,8 +43,8 @@ public class TokenService : ITokenService
         var expiry = DateTime.UtcNow.AddDays(expiryDays);
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: expiry,
             signingCredentials: creds);

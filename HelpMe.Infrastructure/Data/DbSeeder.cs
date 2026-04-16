@@ -1,3 +1,4 @@
+using HelpMe.Application.Interfaces;
 using HelpMe.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ public static class DbSeeder
     public static async Task SeedAsync(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole> roleManager,
-        ApplicationDbContext context)
+        IApplicationDbContext context)
     {
         await SeedRolesAsync(roleManager);
         await SeedUsersAsync(userManager);
@@ -78,7 +79,7 @@ public static class DbSeeder
         await userManager.AddToRoleAsync(user, role);
     }
 
-    private static async Task SeedCategoriesAsync(ApplicationDbContext context)
+    private static async Task SeedCategoriesAsync(IApplicationDbContext context)
     {
         if (await context.ServiceCategories.AnyAsync())
             return;
@@ -206,7 +207,7 @@ public static class DbSeeder
         await context.SaveChangesAsync();
     }
 
-    private static async Task SeedRegionsAndCitiesAsync(ApplicationDbContext context)
+    private static async Task SeedRegionsAndCitiesAsync(IApplicationDbContext context)
     {
         if (await context.Regions.AnyAsync())
             return;
