@@ -105,6 +105,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRegionService, RegionService>();
+builder.Services.AddScoped<IHandymanProfileService, HandymanProfileService>();
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
 var app = builder.Build();
