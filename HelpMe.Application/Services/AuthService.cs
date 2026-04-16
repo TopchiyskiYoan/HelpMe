@@ -27,6 +27,9 @@ public class AuthService : IAuthService
         if (await _userManager.FindByEmailAsync(dto.Email) is not null)
             return AuthResult.Fail("EMAIL_EXISTS");
 
+        if (dto.Role is not ("Client" or "Handyman"))
+            return AuthResult.Fail("INVALID_ROLE");
+
         if (!await _roleManager.RoleExistsAsync(dto.Role))
             return AuthResult.Fail("INVALID_ROLE");
 
