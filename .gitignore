@@ -36,3 +36,4 @@ Thumbs.db
 # Local docs (seed data, design files — not part of source)
 docs/
 
+/run.txt
