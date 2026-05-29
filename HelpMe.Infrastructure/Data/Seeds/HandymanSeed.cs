@@ -62,6 +62,7 @@ public static class HandymanSeed
                 UserId = user.Id,
                 Bio = profile.Bio,
                 YearsOfExperience = profile.YearsOfExperience,
+                IsVerified = true,
                 SubCategories = subCategoryIds.Select(id => new HandymanSubCategory { SubCategoryId = id }).ToList(),
                 Cities = cityIds.Select(id => new HandymanCity { CityId = id }).ToList()
             };
