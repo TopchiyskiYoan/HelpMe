@@ -10,6 +10,7 @@ public class HandymanProfileDto
     public string? Bio { get; set; }
     public int YearsOfExperience { get; set; }
     public bool IsActive { get; set; }
+    public bool IsVerified { get; set; }
     public List<SubCategoryDto> SubCategories { get; set; } = new();
     public List<CityDto> Cities { get; set; } = new();
 }
@@ -46,4 +47,9 @@ public class UpdateHandymanProfileDto
     [Required]
     [MinLength(1)]
     public List<int> CityIds { get; set; } = new();
+}
+
+public class VerifyHandymanDto
+{
+    public bool Approved { get; set; }
 }

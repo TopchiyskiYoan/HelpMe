@@ -17,7 +17,7 @@ public class HandymanProfileService : IHandymanProfileService
     public async Task<List<HandymanProfileDto>> GetAllAsync()
     {
         var profiles = await _context.HandymanProfiles
-            .Where(h => h.IsActive)
+            .Where(h => h.IsActive && h.IsVerified)
             .Include(h => h.User)
             .Include(h => h.SubCategories)
                 .ThenInclude(hs => hs.SubCategory)
@@ -43,8 +43,25 @@ public class HandymanProfileService : IHandymanProfileService
         return profile is null ? null : ToDto(profile);
     }
 
-    public async Task<HandymanProfileDto> CreateAsync(string userId, CreateHandymanProfileDto dto)
+    public async Task<HandymanProfileDto?> GetPublicProfileAsync(string userId)
     {
+        var profile = await _context.HandymanProfiles
+            .Where(h => h.UserId == userId && h.IsActive && h.IsVerified)
+            .Include(h => h.User)
+            .Include(h => h.SubCategories)
+                .ThenInclude(hs => hs.SubCategory)
+            .Include(h => h.Cities)
+                .ThenInclude(hc => hc.City)
+            .FirstOrDefaultAsync();
+
+        return profile is null ? null : ToDto(profile);
+    }
+
+    public async Task<HandymanProfileDto?> CreateAsync(string userId, CreateHandymanProfileDto dto)
+    {
+        if (await _context.HandymanProfiles.AnyAsync(h => h.UserId == userId))
+            return null;
+
         var profile = new HandymanProfile
         {
             UserId = userId,
@@ -103,6 +120,33 @@ public class HandymanProfileService : IHandymanProfileService
         return true;
     }
 
+    public async Task<List<HandymanProfileDto>> GetPendingVerificationAsync()
+    {
+        var profiles = await _context.HandymanProfiles
+            .Where(h => h.IsActive && !h.IsVerified)
+            .Include(h => h.User)
+            .Include(h => h.SubCategories)
+                .ThenInclude(hs => hs.SubCategory)
+            .Include(h => h.Cities)
+                .ThenInclude(hc => hc.City)
+            .OrderBy(h => h.User.FirstName)
+            .ToListAsync();
+
+        return profiles.Select(ToDto).ToList();
+    }
+
+    public async Task<bool> VerifyAsync(string userId, bool approved)
+    {
+        var profile = await _context.HandymanProfiles
+            .FirstOrDefaultAsync(h => h.UserId == userId && h.IsActive);
+
+        if (profile is null) return false;
+
+        profile.IsVerified = approved;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     private static HandymanProfileDto ToDto(HandymanProfile h) => new()
     {
         UserId = h.UserId,
@@ -111,6 +155,7 @@ public class HandymanProfileService : IHandymanProfileService
         Bio = h.Bio,
         YearsOfExperience = h.YearsOfExperience,
         IsActive = h.IsActive,
+        IsVerified = h.IsVerified,
         SubCategories = h.SubCategories
             .Where(hs => hs.SubCategory is not null)
             .Select(hs => new SubCategoryDto

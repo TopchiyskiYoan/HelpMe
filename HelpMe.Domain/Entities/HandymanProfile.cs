@@ -14,6 +14,8 @@ public class HandymanProfile
 
     public bool IsActive { get; set; } = true;
 
+    public bool IsVerified { get; set; } = false;
+
     public ApplicationUser User { get; set; } = null!;
     public ICollection<HandymanSubCategory> SubCategories { get; set; } = new List<HandymanSubCategory>();
     public ICollection<HandymanCity> Cities { get; set; } = new List<HandymanCity>();
