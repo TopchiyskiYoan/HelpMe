@@ -17,6 +17,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<ServiceSubCategory> ServiceSubCategories => Set<ServiceSubCategory>();
     public DbSet<Region> Regions => Set<Region>();
     public DbSet<City> Cities => Set<City>();
+    public DbSet<HandymanProfile> HandymanProfiles => Set<HandymanProfile>();
+    public DbSet<HandymanSubCategory> HandymanSubCategories => Set<HandymanSubCategory>();
+    public DbSet<HandymanCity> HandymanCities => Set<HandymanCity>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -40,6 +43,45 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             .HasOne(c => c.Region)
             .WithMany(r => r.Cities)
             .HasForeignKey(c => c.RegionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<HandymanProfile>()
+            .HasKey(h => h.UserId);
+
+        builder.Entity<HandymanProfile>()
+            .HasOne(h => h.User)
+            .WithOne()
+            .HasForeignKey<HandymanProfile>(h => h.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<HandymanSubCategory>()
+            .HasKey(hs => new { hs.UserId, hs.SubCategoryId });
+
+        builder.Entity<HandymanSubCategory>()
+            .HasOne(hs => hs.HandymanProfile)
+            .WithMany(h => h.SubCategories)
+            .HasForeignKey(hs => hs.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<HandymanSubCategory>()
+            .HasOne(hs => hs.SubCategory)
+            .WithMany()
+            .HasForeignKey(hs => hs.SubCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<HandymanCity>()
+            .HasKey(hc => new { hc.UserId, hc.CityId });
+
+        builder.Entity<HandymanCity>()
+            .HasOne(hc => hc.HandymanProfile)
+            .WithMany(h => h.Cities)
+            .HasForeignKey(hc => hc.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<HandymanCity>()
+            .HasOne(hc => hc.City)
+            .WithMany()
+            .HasForeignKey(hc => hc.CityId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
