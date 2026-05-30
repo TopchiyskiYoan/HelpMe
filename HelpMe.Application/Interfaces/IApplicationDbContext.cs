@@ -12,6 +12,8 @@ public interface IApplicationDbContext
     DbSet<HandymanProfile> HandymanProfiles { get; }
     DbSet<HandymanSubCategory> HandymanSubCategories { get; }
     DbSet<HandymanCity> HandymanCities { get; }
+    DbSet<Job> Jobs { get; }
+    DbSet<JobInterest> JobInterests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

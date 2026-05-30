@@ -20,6 +20,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<HandymanProfile> HandymanProfiles => Set<HandymanProfile>();
     public DbSet<HandymanSubCategory> HandymanSubCategories => Set<HandymanSubCategory>();
     public DbSet<HandymanCity> HandymanCities => Set<HandymanCity>();
+    public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<JobInterest> JobInterests => Set<JobInterest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -83,5 +85,53 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             .WithMany()
             .HasForeignKey(hc => hc.CityId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Job>()
+            .HasOne(j => j.Client)
+            .WithMany()
+            .HasForeignKey(j => j.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Job>()
+            .HasOne(j => j.SubCategory)
+            .WithMany()
+            .HasForeignKey(j => j.SubCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Job>()
+            .HasOne(j => j.City)
+            .WithMany()
+            .HasForeignKey(j => j.CityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Job>()
+            .HasOne(j => j.SelectedHandyman)
+            .WithMany()
+            .HasForeignKey(j => j.SelectedHandymanId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<Job>()
+            .Property(j => j.ApproximateBudget)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<JobInterest>()
+            .HasOne(i => i.Job)
+            .WithMany(j => j.Interests)
+            .HasForeignKey(i => i.JobId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<JobInterest>()
+            .HasOne(i => i.Handyman)
+            .WithMany()
+            .HasForeignKey(i => i.HandymanId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<JobInterest>()
+            .Property(i => i.ProposedPrice)
+            .HasColumnType("decimal(18,2)");
+
+        builder.Entity<JobInterest>()
+            .HasIndex(i => new { i.JobId, i.HandymanId })
+            .IsUnique();
     }
 }

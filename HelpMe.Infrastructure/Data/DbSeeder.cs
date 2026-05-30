@@ -17,5 +17,6 @@ public static class DbSeeder
         await CategorySeed.SeedAsync(context);
         await LocationSeed.SeedAsync(context);
         await HandymanSeed.SeedAsync(userManager, context);
+        await JobSeed.SeedAsync(userManager, context);
     }
 }

@@ -9,15 +9,15 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(!!localStorage.getItem('token'))
 
   useEffect(() => {
-    if (!token) { setLoading(false); return }
+    if (!token) return
     api.get('/auth/me')
       .then(setUser)
       .catch(() => {
         localStorage.removeItem('token')
         setToken(null)
       })
-      .finally(() => setLoading(false))
-  }, [])
+            .finally(() => setLoading(false))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = (userData, jwtToken) => {
     setUser(userData)
@@ -38,6 +38,7 @@ export function AuthProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used inside AuthProvider')

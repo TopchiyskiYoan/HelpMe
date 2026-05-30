@@ -34,7 +34,13 @@ run.txt
 .vscode/
 !.vscode/extensions.json
 
-# Local docs (seed data, design files — not part of source)
+# Local docs, design specs, brainstorm artifacts
 docs/
+.design/
+.superpowers/
+.playwright-mcp/
+*.png
+*.jpeg
+*.jpg
 
 /run.txt
