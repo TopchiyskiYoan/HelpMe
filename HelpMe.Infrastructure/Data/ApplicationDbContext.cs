@@ -22,6 +22,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<HandymanCity> HandymanCities => Set<HandymanCity>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<JobInterest> JobInterests => Set<JobInterest>();
+    public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ReviewResponse> ReviewResponses => Set<ReviewResponse>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -133,5 +135,33 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         builder.Entity<JobInterest>()
             .HasIndex(i => new { i.JobId, i.HandymanId })
             .IsUnique();
+
+        builder.Entity<Review>()
+            .HasOne(r => r.Job)
+            .WithMany()
+            .HasForeignKey(r => r.JobId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Review>()
+            .HasOne(r => r.Client)
+            .WithMany()
+            .HasForeignKey(r => r.ClientId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Review>()
+            .HasOne(r => r.Handyman)
+            .WithMany()
+            .HasForeignKey(r => r.HandymanId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Review>()
+            .HasIndex(r => r.JobId)
+            .IsUnique();
+
+        builder.Entity<ReviewResponse>()
+            .HasOne(rr => rr.Review)
+            .WithOne(r => r.Response)
+            .HasForeignKey<ReviewResponse>(rr => rr.ReviewId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

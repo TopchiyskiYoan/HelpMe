@@ -108,6 +108,7 @@ builder.Services.AddScoped<IRegionService, RegionService>();
 builder.Services.AddScoped<IHandymanProfileService, HandymanProfileService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IJobInterestService, JobInterestService>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
 var app = builder.Build();

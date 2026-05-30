@@ -100,6 +100,39 @@ public static class JobSeed
                 }
             };
             jobs.Add(inProgressJob);
+
+            var completedJob = new Job
+            {
+                Title = "Поправка на ел. инсталация",
+                Description = "Смяна на стара инсталация в баня. Работата е приключена.",
+                ApproximateBudget = 320,
+                Status = JobStatus.Completed,
+                ClientId = client.Id,
+                SubCategoryId = elektroSub.Id,
+                CityId = sofia.Id,
+                SelectedHandymanId = handyman1.Id,
+                CreatedAt = DateTime.UtcNow.AddDays(-20),
+                UpdatedAt = DateTime.UtcNow.AddDays(-15)
+            };
+            jobs.Add(completedJob);
+        }
+
+        if (handyman2 is not null)
+        {
+            var completedJob2 = new Job
+            {
+                Title = "Ремонт на теч в баня",
+                Description = "Течащ кран в банята. Проблемът е отстранен.",
+                ApproximateBudget = 120,
+                Status = JobStatus.Completed,
+                ClientId = client.Id,
+                SubCategoryId = vikSub.Id,
+                CityId = sofia.Id,
+                SelectedHandymanId = handyman2.Id,
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-25)
+            };
+            jobs.Add(completedJob2);
         }
 
         await context.Jobs.AddRangeAsync(jobs);

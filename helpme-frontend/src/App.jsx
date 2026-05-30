@@ -9,6 +9,7 @@ import ClientDashboardPage from './pages/ClientDashboardPage.jsx'
 import HandymanFeedPage from './pages/HandymanFeedPage.jsx'
 import JobDetailPage from './pages/JobDetailPage.jsx'
 import PendingConfirmationsPage from './pages/PendingConfirmationsPage.jsx'
+import HandymanPublicProfilePage from './pages/HandymanPublicProfilePage.jsx'
 
 function App() {
   return (
@@ -34,6 +35,9 @@ function App() {
         } />
         <Route path="/handymen/me/interests" element={
           <ProtectedRoute roles={['Handyman']}><PendingConfirmationsPage /></ProtectedRoute>
+        } />
+        <Route path="/handymen/:userId" element={
+          <ProtectedRoute><HandymanPublicProfilePage /></ProtectedRoute>
         } />
 
         <Route path="*" element={<Navigate to="/" replace />} />

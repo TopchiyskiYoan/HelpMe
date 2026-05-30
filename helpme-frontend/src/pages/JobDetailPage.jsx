@@ -4,6 +4,7 @@ import { api } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import InterestForm from '../components/InterestForm.jsx'
 import InterestedHandymanCard from '../components/InterestedHandymanCard.jsx'
+import ReviewForm from '../components/ReviewForm.jsx'
 import { STATUS_LABELS, STATUS_COLORS } from '../utils/jobStatus.js'
 
 const s = {
@@ -144,14 +145,21 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [actionError, setActionError] = useState('')
   const [interestSubmitted, setInterestSubmitted] = useState(false)
+  const [hasReview, setHasReview] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const j = await api.get(`/jobs/${id}`)
       setJob(j)
       if (user?.role === 'Client' && j.clientId === user.id) {
-        const ints = await api.get(`/jobs/${id}/interests`)
-        setInterests(ints)
+        if (j.status !== 'Completed') {
+          const ints = await api.get(`/jobs/${id}/interests`)
+          setInterests(ints)
+        }
+        if (j.status === 'Completed' && j.selectedHandymanId) {
+          const reviews = await api.get(`/reviews/handyman/${j.selectedHandymanId}`)
+          setHasReview(reviews.some(r => r.jobId === j.id))
+        }
       }
       if (user?.role === 'Handyman') {
         const myInts = await api.get('/handymen/me/interests')
@@ -262,6 +270,18 @@ export default function JobDetailPage() {
             ? <div style={s.alreadyInterested}>✓ Вече сте изразили интерес към тази поръчка.</div>
             : <InterestForm jobId={Number(id)} onSubmitted={() => { setInterestSubmitted(true); load() }} />
           }
+        </div>
+      )}
+
+      {isOwner && job.status === 'Completed' && !hasReview && (
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Оставете отзив</div>
+          <ReviewForm jobId={job.id} onSubmitted={() => { setHasReview(true); load() }} />
+        </div>
+      )}
+      {isOwner && job.status === 'Completed' && hasReview && (
+        <div style={{ ...s.alreadyInterested, background: '#fef3c7', border: '1px solid #fde68a', color: '#78350f' }}>
+          ✓ Вече сте оставили отзив за тази поръчка.
         </div>
       )}
     </div>

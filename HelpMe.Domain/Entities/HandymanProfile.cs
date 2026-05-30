@@ -16,6 +16,10 @@ public class HandymanProfile
 
     public bool IsVerified { get; set; } = false;
 
+    public double AverageRating { get; set; } = 0;
+
+    public int ReviewCount { get; set; } = 0;
+
     public ApplicationUser User { get; set; } = null!;
     public ICollection<HandymanSubCategory> SubCategories { get; set; } = new List<HandymanSubCategory>();
     public ICollection<HandymanCity> Cities { get; set; } = new List<HandymanCity>();
