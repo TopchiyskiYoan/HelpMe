@@ -17,6 +17,42 @@ public class AdminService : IAdminService
         _context = context;
     }
 
+    public async Task<AdminStatsDto> GetStatsAsync()
+    {
+        var allUsers = await _userManager.Users.ToListAsync();
+        var clients = new List<ApplicationUser>();
+        var handymen = new List<ApplicationUser>();
+        foreach (var u in allUsers)
+        {
+            var roles = await _userManager.GetRolesAsync(u);
+            if (roles.Contains("Client")) clients.Add(u);
+            else if (roles.Contains("Handyman")) handymen.Add(u);
+        }
+
+        var handymanProfiles = await _context.HandymanProfiles.ToListAsync();
+        var verified = handymanProfiles.Count(h => h.IsVerified);
+        var pending = handymanProfiles.Count(h => !h.IsVerified);
+
+        var jobs = await _context.Jobs.ToListAsync();
+        var reviews = await _context.Reviews.ToListAsync();
+        var avgRating = reviews.Count > 0 ? reviews.Average(r => r.Rating) : 0;
+
+        return new AdminStatsDto
+        {
+            TotalUsers = allUsers.Count,
+            TotalClients = clients.Count,
+            TotalHandymen = handymen.Count,
+            VerifiedHandymen = verified,
+            PendingVerifications = pending,
+            TotalJobs = jobs.Count,
+            OpenJobs = jobs.Count(j => j.Status == JobStatus.Open),
+            InProgressJobs = jobs.Count(j => j.Status == JobStatus.InProgress),
+            CompletedJobs = jobs.Count(j => j.Status == JobStatus.Completed),
+            TotalReviews = reviews.Count,
+            AverageRating = Math.Round(avgRating, 1)
+        };
+    }
+
     public async Task<PagedResult<AdminUserDto>> GetAllUsersAsync(string? search, int page, int pageSize = 10)
     {
         var query = _userManager.Users.AsQueryable();
@@ -47,6 +83,7 @@ public class AdminService : IAdminService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
                 Role = roles.FirstOrDefault() ?? string.Empty,
                 IsBanned = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow,
                 CreatedAt = user.CreatedAt
@@ -60,6 +97,59 @@ public class AdminService : IAdminService
             Page = page,
             PageSize = pageSize
         };
+    }
+
+    public async Task<AdminUserDetailDto?> GetUserDetailAsync(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null) return null;
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var role = roles.FirstOrDefault() ?? string.Empty;
+
+        var dto = new AdminUserDetailDto
+        {
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email ?? string.Empty,
+            PhoneNumber = user.PhoneNumber,
+            ProfilePictureUrl = user.ProfilePictureUrl,
+            Role = role,
+            IsBanned = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow,
+            CreatedAt = user.CreatedAt
+        };
+
+        if (role == "Handyman")
+        {
+            var profile = await _context.HandymanProfiles
+                .Include(h => h.SubCategories).ThenInclude(sc => sc.SubCategory)
+                .Include(h => h.Cities).ThenInclude(c => c.City)
+                .FirstOrDefaultAsync(h => h.UserId == id);
+
+            if (profile is not null)
+            {
+                dto.AverageRating = profile.AverageRating;
+                dto.ReviewCount = profile.ReviewCount;
+                dto.IsVerified = profile.IsVerified;
+                dto.YearsOfExperience = profile.YearsOfExperience;
+                dto.SubCategories = profile.SubCategories
+                    .Where(sc => sc.SubCategory is not null)
+                    .Select(sc => sc.SubCategory!.Name)
+                    .ToList();
+                dto.Cities = profile.Cities
+                    .Where(c => c.City is not null)
+                    .Select(c => c.City!.Name)
+                    .ToList();
+            }
+        }
+        else if (role == "Client")
+        {
+            dto.TotalJobs = await _context.Jobs.CountAsync(j => j.ClientId == id);
+            dto.CompletedJobs = await _context.Jobs.CountAsync(j => j.ClientId == id && j.Status == JobStatus.Completed);
+        }
+
+        return dto;
     }
 
     public async Task<bool> BanUserAsync(string userId)
@@ -81,7 +171,7 @@ public class AdminService : IAdminService
         return true;
     }
 
-    public async Task<PagedResult<AdminJobDto>> GetAllJobsAsync(string? status, int page, int pageSize = 10)
+    public async Task<PagedResult<AdminJobDto>> GetAllJobsAsync(string? status, int page, string? sortBy = null, string? sortDir = "desc", int pageSize = 10)
     {
         var query = _context.Jobs
             .Include(j => j.Client)
@@ -93,11 +183,20 @@ public class AdminService : IAdminService
             query = query.Where(j => j.Status == jobStatus);
 
         var totalCount = await query.CountAsync();
-        var jobs = await query
-            .OrderByDescending(j => j.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+
+        query = (sortBy?.ToLower(), sortDir?.ToLower() == "asc") switch
+        {
+            ("title", true)  => query.OrderBy(j => j.Title),
+            ("title", false) => query.OrderByDescending(j => j.Title),
+            ("budget", true)  => query.OrderBy(j => j.ApproximateBudget),
+            ("budget", false) => query.OrderByDescending(j => j.ApproximateBudget),
+            ("status", true)  => query.OrderBy(j => j.Status),
+            ("status", false) => query.OrderByDescending(j => j.Status),
+            (_, true)  => query.OrderBy(j => j.CreatedAt),
+            _          => query.OrderByDescending(j => j.CreatedAt),
+        };
+
+        var jobs = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
         return new PagedResult<AdminJobDto>
         {
@@ -117,7 +216,7 @@ public class AdminService : IAdminService
         };
     }
 
-    public async Task<PagedResult<AdminReviewDto>> GetAllReviewsAsync(int page, int pageSize = 10)
+    public async Task<PagedResult<AdminReviewDto>> GetAllReviewsAsync(int page, string? sortBy = null, string? sortDir = "desc", int pageSize = 10)
     {
         var query = _context.Reviews
             .Include(r => r.Client)
@@ -126,11 +225,18 @@ public class AdminService : IAdminService
             .AsQueryable();
 
         var totalCount = await query.CountAsync();
-        var reviews = await query
-            .OrderByDescending(r => r.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+
+        query = (sortBy?.ToLower(), sortDir?.ToLower() == "asc") switch
+        {
+            ("rating", true)  => query.OrderBy(r => r.Rating),
+            ("rating", false) => query.OrderByDescending(r => r.Rating),
+            ("handyman", true)  => query.OrderBy(r => r.Handyman!.User!.FirstName),
+            ("handyman", false) => query.OrderByDescending(r => r.Handyman!.User!.FirstName),
+            (_, true)  => query.OrderBy(r => r.CreatedAt),
+            _          => query.OrderByDescending(r => r.CreatedAt),
+        };
+
+        var reviews = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
         return new PagedResult<AdminReviewDto>
         {

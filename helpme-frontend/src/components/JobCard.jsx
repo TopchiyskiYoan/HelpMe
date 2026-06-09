@@ -1,13 +1,18 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { STATUS_LABELS, STATUS_COLORS } from '../utils/jobStatus.js'
 import { t } from '../theme.js'
 
 export default function JobCard({ job }) {
   const [hovered, setHovered] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/jobs/${job.id}`)}
+      onKeyDown={(e) => e.key === 'Enter' && navigate(`/jobs/${job.id}`)}
       style={{
         border: `1px solid ${hovered ? t.amberBorder : t.border}`,
         borderRadius: t.radius,
@@ -20,17 +25,18 @@ export default function JobCard({ job }) {
         boxShadow: hovered ? t.shadowMd : t.shadow,
         transform: hovered ? 'translateY(-1px)' : 'none',
         transition: 'all 0.18s ease',
+        cursor: 'pointer',
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
-        <Link to={`/jobs/${job.id}`} style={{
+        <span style={{
           fontSize: '15px', fontWeight: 700, color: t.text,
-          textDecoration: 'none', letterSpacing: '-0.01em', lineHeight: 1.3, flex: 1,
+          letterSpacing: '-0.01em', lineHeight: 1.3, flex: 1,
         }}>
           {job.title}
-        </Link>
+        </span>
         <span style={{
           fontSize: '11px', fontWeight: 600, padding: '3px 11px', borderRadius: t.radiusFull,
           whiteSpace: 'nowrap', flexShrink: 0,

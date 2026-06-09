@@ -17,6 +17,7 @@ import AdminUsersPage from './pages/AdminUsersPage.jsx'
 import AdminJobsPage from './pages/AdminJobsPage.jsx'
 import AdminReviewsPage from './pages/AdminReviewsPage.jsx'
 import AdminVerificationPage from './pages/AdminVerificationPage.jsx'
+import AdminDashboardPage from './pages/AdminDashboardPage.jsx'
 
 function App() {
   return (
@@ -51,6 +52,9 @@ function App() {
           <ProtectedRoute><HandymanPublicProfilePage /></ProtectedRoute>
         } />
 
+        <Route path="/admin" element={
+          <ProtectedRoute roles={['Administrator']}><AdminDashboardPage /></ProtectedRoute>
+        } />
         <Route path="/admin/users" element={
           <ProtectedRoute roles={['Administrator']}><AdminUsersPage /></ProtectedRoute>
         } />

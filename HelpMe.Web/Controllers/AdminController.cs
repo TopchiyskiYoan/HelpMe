@@ -18,10 +18,25 @@ public class AdminController : ControllerBase
         _reviewService = reviewService;
     }
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats()
+    {
+        var stats = await _adminService.GetStatsAsync();
+        return Ok(stats);
+    }
+
     [HttpGet("users")]
     public async Task<IActionResult> GetUsers([FromQuery] string? search, [FromQuery] int page = 1)
     {
         var result = await _adminService.GetAllUsersAsync(search, page);
+        return Ok(result);
+    }
+
+    [HttpGet("users/{id}")]
+    public async Task<IActionResult> GetUserDetail(string id)
+    {
+        var result = await _adminService.GetUserDetailAsync(id);
+        if (result is null) return NotFound();
         return Ok(result);
     }
 
@@ -30,7 +45,6 @@ public class AdminController : ControllerBase
     {
         var success = await _adminService.BanUserAsync(id);
         if (!success) return NotFound();
-
         return NoContent();
     }
 
@@ -39,21 +53,27 @@ public class AdminController : ControllerBase
     {
         var success = await _adminService.UnbanUserAsync(id);
         if (!success) return NotFound();
-
         return NoContent();
     }
 
     [HttpGet("jobs")]
-    public async Task<IActionResult> GetJobs([FromQuery] string? status, [FromQuery] int page = 1)
+    public async Task<IActionResult> GetJobs(
+        [FromQuery] string? status,
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortDir,
+        [FromQuery] int page = 1)
     {
-        var result = await _adminService.GetAllJobsAsync(status, page);
+        var result = await _adminService.GetAllJobsAsync(status, page, sortBy, sortDir);
         return Ok(result);
     }
 
     [HttpGet("reviews")]
-    public async Task<IActionResult> GetReviews([FromQuery] int page = 1)
+    public async Task<IActionResult> GetReviews(
+        [FromQuery] string? sortBy,
+        [FromQuery] string? sortDir,
+        [FromQuery] int page = 1)
     {
-        var result = await _adminService.GetAllReviewsAsync(page);
+        var result = await _adminService.GetAllReviewsAsync(page, sortBy, sortDir);
         return Ok(result);
     }
 
@@ -62,7 +82,6 @@ public class AdminController : ControllerBase
     {
         var success = await _reviewService.DeleteReviewAsync(id);
         if (!success) return NotFound();
-
         return NoContent();
     }
 }

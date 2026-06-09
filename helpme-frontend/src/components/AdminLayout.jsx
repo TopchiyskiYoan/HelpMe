@@ -51,6 +51,13 @@ export default function AdminLayout({ children }) {
       <aside style={s.sidebar}>
         <div style={s.sideTitle}>Администрация</div>
         <NavLink
+          to="/admin"
+          end
+          style={({ isActive }) => ({ ...s.link, ...(isActive ? s.activeLink : {}) })}
+        >
+          Табло
+        </NavLink>
+        <NavLink
           to="/admin/users"
           style={({ isActive }) => ({ ...s.link, ...(isActive ? s.activeLink : {}) })}
         >
