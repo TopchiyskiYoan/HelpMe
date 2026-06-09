@@ -13,11 +13,15 @@ HelpMe/
 ```
 
 **Technology Stack:**
-- Backend: ASP.NET Core 8, Entity Framework Core, MS SQL Server (LocalDB via SSMS)
-- Auth: ASP.NET Core Identity (cookie or JWT)
-- Frontend: Vite + React, fetch API for all HTTP calls
-- Testing: NUnit, Moq (target: 70%+ coverage on Application layer)
-- Source control: GitHub (public repo, README.md, 25+ commits, 7+ different days)
+- Backend: ASP.NET Core 8, Entity Framework Core 8, MS SQL Server (LocalDB)
+- Auth: ASP.NET Core Identity + JWT Bearer tokens (stored in localStorage)
+- Frontend: Vite 8 + React 19 (JavaScript), native fetch API
+- Testing: NUnit, Moq (Application layer unit tests)
+- Source control: GitHub, public repo, 25+ commits, 7+ different days
+
+**Ports:**
+- API: `http://localhost:5079`
+- Frontend: `http://localhost:5173` (Vite proxy forwards `/api/*` to API)
 
 ---
 
@@ -26,25 +30,20 @@ HelpMe/
 ### Feature 1.1 — Solution & Project Setup
 
 **Infrastructure / Config:**
-- Create blank solution `HelpMe`
-- Add all 5 projects with correct project references:
+- Blank solution `HelpMe` with 5 projects:
   - Web → Application → Domain
   - Web → Infrastructure → Domain
   - Tests → Application, Infrastructure
-- Install NuGet packages:
-  - `Microsoft.EntityFrameworkCore.SqlServer` (Infrastructure)
-  - `Microsoft.AspNetCore.Identity.EntityFrameworkCore` (Infrastructure)
-  - `Microsoft.EntityFrameworkCore.Tools` (Infrastructure)
-  - `AutoMapper` (Application)
-  - `NUnit`, `Moq`, `NUnit3TestAdapter` (Tests)
-- Configure `appsettings.json` with LocalDB connection string
-- Register DbContext and Identity in `Program.cs`
+- NuGet packages: EF Core SqlServer, Identity.EntityFrameworkCore, EF Tools, AutoMapper, NUnit, Moq
+- `appsettings.json` with LocalDB connection string
+- Register DbContext, Identity, JWT, CORS in `Program.cs`
 
 **Frontend:**
-- Initialize Vite + React project in `helpme-frontend/`
-- Install: `react-router-dom`, `axios` (or use native fetch)
-- Set up folder structure: `src/pages/`, `src/components/`, `src/services/`, `src/context/`
-- Configure proxy to ASP.NET Core Web API (vite.config.js)
+- Vite + React project in `helpme-frontend/`
+- Dependencies: `react-router-dom`
+- Folder structure: `src/pages/`, `src/components/`, `src/services/`, `src/context/`
+- `vite.config.js` proxy: `/api/*` → `http://localhost:5079`
+- `src/theme.js` — shared design tokens (colors, typography, spacing)
 
 ---
 
@@ -57,128 +56,94 @@ HelpMe/
   - `PhoneNumber` (inherited, required)
   - `ProfilePictureUrl` (string, nullable)
   - `CreatedAt` (DateTime)
+  - `IsBanned` (bool, default false)
 
 **Infrastructure:**
 - `ApplicationDbContext : IdentityDbContext<ApplicationUser>`
-- Add `ApplicationUser` to DbContext
 - Migration: `InitialCreate`
-- Seed: Admin user with role `Administrator`, and sample Client + Handyman users
+- Seed (via `DbSeeder`): 1 admin, 5 clients, 6 handymen — all with password `Test1234!`
 
 **Application:**
-- `IUserService` interface in Domain
-- `UserService` in Application:
+- `IUserService` / `UserService`:
   - `GetUserByIdAsync(string id)`
   - `UpdateProfileAsync(string id, UpdateProfileDto dto)`
-
-**Web — DI:**
-- Register `IUserService → UserService` in `Program.cs`
+  - `ChangePasswordAsync(string id, ChangePasswordDto dto)`
 
 ---
 
-### Feature 1.3 — Authentication Endpoints
+### Feature 1.3 — Authentication Endpoints (JWT)
 
 **Web — Controller:** `AuthController`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/auth/register` | Register new user (Client or Handyman role) |
-| POST | `/api/auth/login` | Login, return auth cookie/token |
-| POST | `/api/auth/logout` | Logout |
-| GET | `/api/auth/me` | Get current user info |
+| POST | `/api/auth/register` | Register (Client or Handyman role) |
+| POST | `/api/auth/login` | Login, return JWT token |
+| GET | `/api/auth/me` | Get current user info from token |
 
-**Validation:**
-- `RegisterDto`: FirstName, LastName, Email, PhoneNumber, Password, Role — all required, email format, password min length 6
-- Return `400` with validation errors on invalid input
-- Return `409` if email already exists
+**JWT Configuration:**
+- Token contains: userId, email, role, firstName, lastName
+- Stored in `localStorage` by frontend `AuthContext`
+- `Authorization: Bearer <token>` header on all protected calls
 
-**Security:**
-- Passwords hashed by Identity
-- CSRF protection enabled (antiforgery middleware or SameSite cookies)
-- Input sanitized to prevent XSS
+**Rate limiting:** applied to register + login endpoints
 
 **Frontend:**
-- `RegisterPage.jsx` — form with role selection (Client / Handyman), calls `POST /api/auth/register`
-- `LoginPage.jsx` — email + password form, calls `POST /api/auth/login`
+- `LoginPage.jsx`, `RegisterPage.jsx` (with role selection dropdown)
 - `AuthContext.jsx` — stores current user, exposes `login()`, `logout()`, `user`
-- `ProtectedRoute.jsx` — redirects to `/login` if not authenticated
-- `App.jsx` — set up React Router with routes: `/login`, `/register`, `/` (protected)
-- Navbar component (basic): shows user name + logout button if logged in
+- `ProtectedRoute.jsx` — redirects to `/login`; optional `roles` prop for role-gating
+- `DashboardPage.jsx` — redirects based on role: Admin → `/admin`, Client → `/dashboard`, Handyman → `/handyman/feed`
+- `Navbar.jsx` — dark slate `#0f172a`, amber logo, avatar with initials, notification bell, dropdown
 
 ---
 
 ## Phase 2 — Handyman Profiles & Categories
 
-### Feature 2.1 — Service Categories
+### Feature 2.1 — Service Categories & Subcategories
 
 **Domain:**
 - `ServiceCategory`
-  - `Id` (int)
-  - `Name` (string, required)
-  - `Icon` (string, emoji or icon name)
-  - `Description` (string, nullable)
-  - `ParentCategoryId` (int?, self-referencing FK)
-  - `IsActive` (bool)
-  - `ParentCategory` (navigation)
-  - `SubCategories` (ICollection)
+  - `Id` (int), `Name` (string), `Icon` (string), `Description` (string, nullable)
+  - `SubCategories` (ICollection of `ServiceSubCategory`)
+
+- `ServiceSubCategory`
+  - `Id` (int), `Name` (string), `CategoryId` (int, FK)
+  - `Category` (navigation)
 
 **Infrastructure:**
-- Add `ServiceCategories` DbSet to DbContext
-- Migration: `AddServiceCategory`
-- Seed: 6–8 top-level categories (ВиК, Електро, Бояджийство, Почистване, Преместване, Градина, Климатици, ИТ поддръжка) with subcategories
-
-**Application:**
-- `ICategoryService` / `CategoryService`:
-  - `GetAllAsync()` — returns tree structure
-  - `GetByIdAsync(int id)`
-  - `CreateAsync(CreateCategoryDto dto)` — Admin only
-  - `UpdateAsync(int id, UpdateCategoryDto dto)` — Admin only
-  - `DeactivateAsync(int id)` — Admin only
+- DbSets: `ServiceCategories`, `ServiceSubCategories`
+- Migration: `AddServiceCategories`
+- Seed: 10 categories, 50+ subcategories (ВиК, Електро, Шпакловка/Боядисване, Дограма, Облицовки, Климатизация, Сухо строителство, Отопление, Дърводелство, Паркет)
 
 **Web — Controller:** `CategoriesController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/categories` | Public | Get all active categories |
-| GET | `/api/categories/{id}` | Public | Get category by id |
-| POST | `/api/categories` | Admin | Create category |
-| PUT | `/api/categories/{id}` | Admin | Update category |
-| DELETE | `/api/categories/{id}` | Admin | Deactivate category |
-
-**Frontend:**
-- Admin page: `AdminCategoriesPage.jsx` — table with all categories, add/edit/deactivate actions
-- `CategoryForm.jsx` — reusable form for create/edit (name, icon, description, parent)
-- Categories are fetched and cached in a context for use throughout the app
+| GET | `/api/categories` | Public | All categories with subcategories |
 
 ---
 
-### Feature 2.2 — Areas
+### Feature 2.2 — Regions & Cities
 
 **Domain:**
-- `Area`
-  - `Id` (int)
-  - `Name` (string) — e.g. "София", "Пловдив", "Варна"
-  - `Region` (string) — e.g. "Южна България"
-  - `IsActive` (bool)
+- `Region`
+  - `Id` (int), `Name` (string) — Bulgarian oblast (e.g. "Софийска")
+  - `Cities` (ICollection of `City`)
+
+- `City`
+  - `Id` (int), `Name` (string), `RegionId` (int, FK)
+  - `Region` (navigation)
 
 **Infrastructure:**
-- Add `Areas` DbSet
-- Migration: `AddArea`
-- Seed: 28 Bulgarian oblasti + major cities
+- DbSets: `Regions`, `Cities`
+- Migration: `AddRegions`
+- Seed: all 28 Bulgarian oblasti with major cities
 
-**Application:**
-- `IAreaService` / `AreaService`:
-  - `GetAllAsync()`
-  - `GetByIdAsync(int id)`
-  - `CreateAsync(CreateAreaDto dto)` — Admin only
-  - `UpdateAsync(int id, UpdateAreaDto dto)` — Admin only
-
-**Web — Controller:** `AreasController`
+**Web — Controller:** `RegionsController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/areas` | Public | Get all active areas |
-| POST | `/api/areas` | Admin | Create area |
-| PUT | `/api/areas/{id}` | Admin | Update area |
+| GET | `/api/regions` | Public | All regions with cities |
 
 ---
 
@@ -188,62 +153,50 @@ HelpMe/
 - `HandymanProfile`
   - `Id` (int)
   - `UserId` (string, FK to ApplicationUser, 1-to-1)
-  - `Bio` (string)
-  - `YearsOfExperience` (int)
+  - `Bio` (string), `YearsOfExperience` (int)
   - `IsVerified` (bool, default false)
-  - `AverageRating` (double, computed/cached)
-  - `ReviewCount` (int)
+  - `AverageRating` (double, cached), `ReviewCount` (int)
+  - `ProfilePictureUrl` (string, nullable)
   - `CreatedAt` (DateTime)
-  - `User` (navigation)
-  - `Categories` (ICollection of `HandymanCategory`)
-  - `Areas` (ICollection of `HandymanArea`)
+  - Navigation: `User`, `SubCategories`, `Cities`
 
-- `HandymanCategory` (join table)
-  - `HandymanProfileId` (int, FK)
-  - `CategoryId` (int, FK)
+- `HandymanSubCategory` (join table)
+  - `HandymanProfileId` (int, FK), `SubCategoryId` (int, FK)
 
-- `HandymanArea` (join table)
-  - `HandymanProfileId` (int, FK)
-  - `AreaId` (int, FK)
+- `HandymanCity` (join table)
+  - `HandymanProfileId` (int, FK), `CityId` (int, FK)
 
 **Infrastructure:**
-- Add DbSets: `HandymanProfiles`, `HandymanCategories`, `HandymanAreas`
+- DbSets: `HandymanProfiles`, `HandymanSubCategories`, `HandymanCities`
 - Migration: `AddHandymanProfile`
-- Configure composite PKs for join tables
-- Seed: 3–5 sample handyman profiles (verified)
+- Composite PKs on join tables
+- Seed: 5 verified handymen + 1 unverified (pending)
 
 **Application:**
 - `IHandymanService` / `HandymanService`:
   - `GetProfileAsync(string userId)`
-  - `GetPublicProfileAsync(int handymanId)` — includes rating, categories, areas
-  - `CreateProfileAsync(string userId, CreateHandymanProfileDto dto)`
-  - `UpdateProfileAsync(string userId, UpdateHandymanProfileDto dto)`
-  - `UpdateCategoriesAsync(string userId, List<int> categoryIds)`
-  - `UpdateAreasAsync(string userId, List<int> areaIds)`
-  - `GetAllVerifiedAsync(int? categoryId, int? areaId)` — with filtering
+  - `GetPublicProfileAsync(string userId)` — includes subcategories, cities, rating
+  - `CreateOrUpdateProfileAsync(string userId, UpdateHandymanProfileDto dto)`
+  - `GetAllVerifiedAsync()` — public directory
   - `GetPendingVerificationAsync()` — Admin only
-  - `VerifyHandymanAsync(int handymanId, bool approved)` — Admin only
+  - `VerifyHandymanAsync(string userId, bool approved)` — Admin only
 
-**Web — Controller:** `HandymanController`
+**Web — Controller:** `HandymenController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/handymen` | Public | List verified handymen (filter by category, area) |
-| GET | `/api/handymen/{id}` | Public | Get public handyman profile |
-| GET | `/api/handymen/me` | Handyman | Get own profile |
-| POST | `/api/handymen/me` | Handyman | Create own profile |
-| PUT | `/api/handymen/me` | Handyman | Update own profile |
-| PUT | `/api/handymen/me/categories` | Handyman | Update selected categories |
-| PUT | `/api/handymen/me/areas` | Handyman | Update selected areas |
-| GET | `/api/admin/handymen/pending` | Admin | Get pending verification list |
-| POST | `/api/admin/handymen/{id}/verify` | Admin | Approve or reject handyman |
+| GET | `/api/handymen` | Public | All verified handymen |
+| GET | `/api/handymen/{userId}` | Public | Public profile by user ID |
+| GET | `/api/handymen/me` | Handyman | Own profile |
+| PUT | `/api/handymen/me` | Handyman | Update profile (bio, exp, subcategories, cities) |
+| GET | `/api/admin/handymen/pending` | Admin | Pending verification queue |
+| POST | `/api/admin/handymen/{userId}/verify` | Admin | Approve |
+| POST | `/api/admin/handymen/{userId}/reject` | Admin | Reject |
 
 **Frontend:**
-- `HandymanProfileEditPage.jsx` — bio, experience, multi-select categories, multi-select areas
-- `HandymanPublicProfilePage.jsx` — shows bio, categories, areas, rating, reviews
-- `HandymanListPage.jsx` — browsable list with filters (category dropdown, area dropdown)
-- `HandymanCard.jsx` — reusable card component (name, rating, categories, areas)
-- Admin page: `AdminVerificationPage.jsx` — list of unverified handymen with approve/reject buttons
+- `HandymanPublicProfilePage.jsx` — bio, rating, subcategories, cities, reviews
+- `HandymanListPage.jsx` — directory with name/specialty/city search, card grid
+- `AdminVerificationPage.jsx` — pending queue with approve/reject
 
 ---
 
@@ -253,124 +206,73 @@ HelpMe/
 
 **Domain:**
 - `Job`
-  - `Id` (int)
-  - `Title` (string, required)
-  - `Description` (string, required)
+  - `Id` (int), `Title` (string), `Description` (string)
   - `ApproximateBudget` (decimal, nullable)
-  - `Status` (enum: Open, AwaitingConfirmation, InProgress, Completed, Cancelled)
-  - `ClientId` (string, FK to ApplicationUser)
-  - `CategoryId` (int, FK)
-  - `AreaId` (int, FK)
+  - `Status` (`JobStatus` enum)
+  - `ClientId` (string, FK), `SubCategoryId` (int, FK), `CityId` (int, FK)
   - `SelectedHandymanId` (int?, FK to HandymanProfile)
-  - `CreatedAt` (DateTime)
-  - `UpdatedAt` (DateTime)
-  - Navigation: `Client`, `Category`, `Area`, `SelectedHandyman`, `Interests`
+  - `CreatedAt`, `UpdatedAt` (DateTime)
+  - Navigation: `Client`, `SubCategory`, `City`, `SelectedHandyman`, `Interests`
 
 - `JobStatus` enum: `Open`, `AwaitingConfirmation`, `InProgress`, `Completed`, `Cancelled`
 
 **Infrastructure:**
-- Add `Jobs` DbSet
+- DbSet: `Jobs`
 - Migration: `AddJob`
-- Seed: 5 sample jobs in various statuses
+- Seed: 31 jobs — 18 open, 3 in progress, 9 completed, 1 cancelled
 
 **Application:**
 - `IJobService` / `JobService`:
   - `CreateAsync(string clientId, CreateJobDto dto)`
   - `GetByIdAsync(int id)`
-  - `GetClientJobsAsync(string clientId)` — all jobs by this client
-  - `GetOpenJobsForHandymanAsync(int handymanId)` — jobs matching handyman's categories + areas
-  - `CancelAsync(int id, string requesterId)` — client can cancel Open or AwaitingConfirmation
+  - `GetClientJobsAsync(string clientId)`
+  - `GetOpenJobsForHandymanAsync(string userId)` — matches handyman's subcategories + cities
+  - `SelectHandymanAsync(int jobId, int interestId, string clientId)`
+  - `ConfirmJobAsync(int jobId, string userId)`
+  - `DeclineJobAsync(int jobId, string userId)`
+  - `CancelAsync(int jobId, string clientId)`
+  - `CompleteAsync(int jobId, string userId)`
 
 **Web — Controller:** `JobsController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/jobs` | Client | Create new job |
-| GET | `/api/jobs/my` | Client | Get client's own jobs |
-| GET | `/api/jobs/feed` | Handyman | Get open jobs matching handyman's profile |
-| GET | `/api/jobs/{id}` | Authenticated | Get job details |
-| POST | `/api/jobs/{id}/cancel` | Client | Cancel a job |
+| POST | `/api/jobs` | Client | Create job |
+| GET | `/api/jobs/my` | Client | Own jobs |
+| GET | `/api/jobs/feed` | Handyman | Matching open jobs |
+| GET | `/api/jobs/{id}` | Authenticated | Job details |
+| POST | `/api/jobs/{id}/interests` | Handyman | Submit interest |
+| POST | `/api/jobs/{id}/select/{handymanId}` | Client | Select handyman |
+| POST | `/api/jobs/{id}/confirm` | Handyman | Confirm assignment |
+| POST | `/api/jobs/{id}/cancel` | Client | Cancel job |
+| POST | `/api/jobs/{id}/complete` | Client or Handyman | Complete job |
 
 **Frontend:**
-- `JobCreatePage.jsx` — multi-step form: select category → fill details → select area → review & submit
-- `ClientDashboardPage.jsx` — list of client's jobs with status badges
-- `HandymanFeedPage.jsx` — list of open jobs matching handyman's categories/areas
-- `JobCard.jsx` — reusable card (title, category, area, budget, status)
+- `JobCreatePage.jsx` — 3-step wizard: (1) subcategory + city, (2) title + description + budget, (3) review + publish
+- `ClientDashboardPage.jsx` — stat cards + job list; clicking entire `JobCard` navigates to detail
+- `HandymanFeedPage.jsx` — feed with text search + city filter dropdown + result count
+- `JobCard.jsx` — full card is clickable via `useNavigate` + `onClick` (not just the title link)
+- `PendingConfirmationsPage.jsx` — handyman's pending assignments
 
 ---
 
-### Feature 3.2 — Job Interest (Handyman Expresses Interest)
+### Feature 3.2 — Job Interest
 
 **Domain:**
 - `JobInterest`
-  - `Id` (int)
-  - `JobId` (int, FK)
-  - `HandymanId` (int, FK to HandymanProfile)
-  - `ProposedPrice` (decimal, required)
-  - `Note` (string, nullable)
+  - `Id` (int), `JobId` (int, FK), `HandymanId` (int, FK)
+  - `ProposedPrice` (decimal), `Note` (string, nullable)
   - `SubmittedAt` (DateTime)
-  - `Status` (enum: Pending, Selected, Rejected)
-  - Navigation: `Job`, `Handyman`
-
-- `JobInterestStatus` enum: `Pending`, `Selected`, `Rejected`
+  - `Status` (`JobInterestStatus` enum: Pending, Selected, Rejected)
 
 **Infrastructure:**
-- Add `JobInterests` DbSet
+- DbSet: `JobInterests`
 - Migration: `AddJobInterest`
 
-**Application:**
-- `IJobInterestService` / `JobInterestService`:
-  - `SubmitInterestAsync(int handymanId, int jobId, SubmitInterestDto dto)`
-  - `GetInterestsForJobAsync(int jobId)` — for client to see who is interested
-  - `GetHandymanInterestsAsync(int handymanId)` — handyman's submitted interests
-  - Validation: handyman cannot submit interest twice for the same job; job must be Open
-
-**Web — Controller:** `JobInterestsController`
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/jobs/{jobId}/interests` | Handyman | Submit interest + proposed price |
-| GET | `/api/jobs/{jobId}/interests` | Client (owner) | Get all interested handymen |
-| GET | `/api/handymen/me/interests` | Handyman | Get own submitted interests |
-
 **Frontend:**
-- `JobDetailPage.jsx` — shows job info; handyman sees "Express Interest" button + price input; client sees list of interested handymen
-- `InterestForm.jsx` — proposed price input + optional note
-- `InterestedHandymanCard.jsx` — shows handyman name, rating, proposed price, "Select" button (client view)
-
----
-
-### Feature 3.3 — Selection & Confirmation
-
-**Application (added to `JobService` and `JobInterestService`):**
-- `SelectHandymanAsync(int jobId, int interestId, string clientId)`
-  - Sets `Job.SelectedHandymanId`
-  - Changes `Job.Status` → `AwaitingConfirmation`
-  - Changes selected `JobInterest.Status` → `Selected`
-  - Changes all other interests → `Rejected`
-  - Creates notifications (see Phase 5)
-- `ConfirmJobAsync(int jobId, int handymanId)`
-  - Validates handyman is the selected one
-  - Changes `Job.Status` → `InProgress`
-- `DeclineJobAsync(int jobId, int handymanId)`
-  - Changes `Job.Status` → `Open`
-  - Resets `Job.SelectedHandymanId` to null
-  - Resets all `JobInterest` statuses back to `Pending`
-  - Notifies client
-
-**Web — added to `JobsController`:**
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/jobs/{jobId}/select/{interestId}` | Client | Select a handyman |
-| POST | `/api/jobs/{jobId}/confirm` | Handyman | Confirm assignment |
-| POST | `/api/jobs/{jobId}/decline` | Handyman | Decline assignment |
-| POST | `/api/jobs/{jobId}/complete` | Client or Handyman | Mark job as complete |
-
-**Frontend:**
-- `JobDetailPage.jsx` — updated: client sees "Select" button per interested handyman; handyman sees "Confirm" / "Decline" buttons when selected
-- `PendingConfirmationsPage.jsx` — handyman sees all jobs awaiting their confirmation
-- Status badge component shows current job status with color coding
+- `JobDetailPage.jsx` — handyman sees interest form; client sees interested candidates list
+- `InterestForm.jsx` — proposed price + optional note
+- `InterestedHandymanCard.jsx` — name, rating, price, select button (client view)
 
 ---
 
@@ -380,80 +282,85 @@ HelpMe/
 
 **Domain:**
 - `Review`
-  - `Id` (int)
-  - `JobId` (int, FK, unique — one review per job)
-  - `ClientId` (string, FK to ApplicationUser)
-  - `HandymanId` (int, FK to HandymanProfile)
-  - `Rating` (int, 1–5)
-  - `Comment` (string)
-  - `CreatedAt` (DateTime)
-  - Navigation: `Job`, `Client`, `Handyman`, `Response`
-
-- `ReviewResponse`
-  - `Id` (int)
-  - `ReviewId` (int, FK, unique)
-  - `Content` (string, required)
-  - `CreatedAt` (DateTime)
-  - Navigation: `Review`
+  - `Id` (int), `JobId` (int, FK, unique), `ClientId` (string, FK), `HandymanId` (int, FK)
+  - `Rating` (int, 1–5), `Comment` (string), `CreatedAt` (DateTime)
 
 **Infrastructure:**
-- Add `Reviews`, `ReviewResponses` DbSets
+- DbSet: `Reviews`
 - Migration: `AddReviews`
-- Seed: 3–5 sample reviews on seeded completed jobs
+- Seed: 9 reviews on completed jobs
 
 **Application:**
 - `IReviewService` / `ReviewService`:
   - `CreateReviewAsync(string clientId, CreateReviewDto dto)`
-    - Validates: job must be Completed, client must be owner, no existing review
-  - `GetHandymanReviewsAsync(int handymanId)` — paginated
-  - `RespondToReviewAsync(int handymanId, int reviewId, string content)`
-  - `UpdateHandymanRatingAsync(int handymanId)` — recalculates and saves avg rating + count
+  - `GetHandymanReviewsAsync(int handymanId)`
+  - `UpdateHandymanRatingAsync(int handymanId)` — recalculates avg + count
 
 **Web — Controller:** `ReviewsController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/reviews` | Client | Leave review on completed job |
-| GET | `/api/reviews/handyman/{handymanId}` | Public | Get handyman's reviews (paged) |
-| POST | `/api/reviews/{id}/respond` | Handyman | Respond to a review |
-| DELETE | `/api/reviews/{id}` | Admin | Remove inappropriate review |
+| POST | `/api/reviews` | Client | Leave review (completed jobs only) |
+| GET | `/api/handymen/{userId}/reviews` | Public | Handyman's reviews |
+| DELETE | `/api/admin/reviews/{id}` | Admin | Remove review |
 
 **Frontend:**
-- `ReviewForm.jsx` — star rating (1–5) + comment textarea, shown after job completion
-- `ReviewList.jsx` — list of reviews with rating, comment, date, handyman response
-- `StarRating.jsx` — reusable display component (read-only and interactive modes)
-- `HandymanPublicProfilePage.jsx` — updated: shows avg rating, review count, review list
+- `ReviewForm.jsx` — star selector (1–5) + comment textarea
+- `StarRating.jsx` — reusable display (read-only and interactive)
+- `ReviewList.jsx` — list with rating, comment, date
 
 ---
 
 ### Feature 4.2 — Admin Dashboard
 
-**Application:**
-- `IAdminService` / `AdminService`:
-  - `GetAllUsersAsync(string? search, int page)` — paginated, searchable
-  - `BanUserAsync(string userId)`
-  - `UnbanUserAsync(string userId)`
-  - `GetAllJobsAsync(JobStatus? status, int page)` — paginated, filterable
-  - `GetAllReviewsAsync(int page)` — paginated
-  - `DeleteReviewAsync(int reviewId)`
+**Application — `IAdminService` / `AdminService`:**
+- `GetAllUsersAsync(string? search, int page)` — paginated, searchable
+- `BanUserAsync(string userId)` / `UnbanUserAsync(string userId)`
+- `GetAllJobsAsync(JobStatus? status, int page, string? sortBy, string? sortDir, int pageSize)`
+  - Sort options: `title`, `budget`, `status`, `createdAt` (each ↑/↓)
+- `GetAllReviewsAsync(int page, string? sortBy, string? sortDir, int pageSize)`
+  - Sort options: `createdAt`, `rating`, `handymanName`
+- `DeleteReviewAsync(int reviewId)`
+- `GetStatsAsync()` → `AdminStatsDto`
+- `GetUserDetailAsync(string id)` → `AdminUserDetailDto`
+
+**DTOs:**
+```csharp
+AdminStatsDto {
+    TotalUsers, TotalClients, TotalHandymen, VerifiedHandymen, PendingVerifications,
+    TotalJobs, OpenJobs, InProgressJobs, CompletedJobs, TotalReviews, AverageRating
+}
+
+AdminUserDetailDto {
+    Id, FirstName, LastName, Email, PhoneNumber, ProfilePictureUrl,
+    Role, IsBanned, CreatedAt,
+    // Handyman only
+    AverageRating?, ReviewCount?, IsVerified?, YearsOfExperience?,
+    SubCategories (List<string>), Cities (List<string>),
+    // Client only
+    TotalJobs?, CompletedJobs?
+}
+```
 
 **Web — Controller:** `AdminController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/admin/users` | Admin | List all users (search + paging) |
+| GET | `/api/admin/stats` | Admin | Platform statistics |
+| GET | `/api/admin/users` | Admin | All users (search + paging) |
+| GET | `/api/admin/users/{id}` | Admin | Detailed user profile |
 | POST | `/api/admin/users/{id}/ban` | Admin | Ban user |
 | POST | `/api/admin/users/{id}/unban` | Admin | Unban user |
-| GET | `/api/admin/jobs` | Admin | List all jobs (filter by status + paging) |
-| GET | `/api/admin/reviews` | Admin | List all reviews (paging) |
+| GET | `/api/admin/jobs` | Admin | All jobs (filter + sort + paging) |
+| GET | `/api/admin/reviews` | Admin | All reviews (sort + paging) |
 | DELETE | `/api/admin/reviews/{id}` | Admin | Delete review |
 
 **Frontend:**
-- `AdminLayout.jsx` — sidebar navigation for admin pages
-- `AdminUsersPage.jsx` — searchable, paginated table of users with ban/unban action
-- `AdminJobsPage.jsx` — filterable, paginated table of all jobs with status
-- `AdminReviewsPage.jsx` — paginated table of reviews with delete action
-- Admin pages are protected — redirect to home if not in Administrator role
+- `AdminLayout.jsx` — sidebar with links to Табло, Потребители, Верификация, Поръчки, Отзиви
+- `AdminDashboardPage.jsx` — stat cards grid + recent jobs panel + recent reviews panel + quick action links; admin lands here on login
+- `AdminUsersPage.jsx` — searchable table; click any row opens `UserDrawer` (right-side panel with full profile, role-specific data, ban/unban button)
+- `AdminJobsPage.jsx` — filterable by status + sortable (date↑↓, title A-Z, budget↑↓, status)
+- `AdminReviewsPage.jsx` — sortable (date↑↓, rating↑↓, handyman A-Z) + delete
 
 ---
 
@@ -463,96 +370,105 @@ HelpMe/
 
 **Domain:**
 - `Notification`
-  - `Id` (int)
-  - `UserId` (string, FK to ApplicationUser)
-  - `Title` (string)
-  - `Message` (string)
-  - `IsRead` (bool, default false)
-  - `CreatedAt` (DateTime)
-  - `Type` (enum: JobInterestReceived, HandymanSelected, JobConfirmed, JobDeclined, JobCompleted, ReviewReceived, VerificationResult)
+  - `Id` (int), `UserId` (string, FK)
+  - `Title` (string), `Message` (string)
+  - `IsRead` (bool, default false), `CreatedAt` (DateTime)
+  - `Type` (`NotificationType` enum)
 
-- `NotificationType` enum (listed above)
+- `NotificationType` enum: `JobInterestReceived`, `HandymanSelected`, `JobConfirmed`, `JobDeclined`, `JobCompleted`, `ReviewReceived`, `VerificationResult`
 
-**Infrastructure:**
-- Add `Notifications` DbSet
-- Migration: `AddNotifications`
-
-**Application:**
-- `INotificationService` / `NotificationService`:
-  - `CreateAsync(string userId, NotificationType type, string title, string message)`
-  - `GetUserNotificationsAsync(string userId)` — last 20, newest first
-  - `MarkAsReadAsync(int id, string userId)`
-  - `MarkAllAsReadAsync(string userId)`
-  - `GetUnreadCountAsync(string userId)`
-
-- Notification creation is called from other services at key events:
-
-| Event | Triggered in | Recipient |
-|-------|-------------|-----------|
-| Handyman submits interest | `JobInterestService.SubmitInterestAsync` | Client |
-| Client selects handyman | `JobService.SelectHandymanAsync` | Selected handyman |
-| Client selects handyman | `JobService.SelectHandymanAsync` | Rejected handymen |
-| Handyman confirms | `JobService.ConfirmJobAsync` | Client |
-| Handyman declines | `JobService.DeclineJobAsync` | Client |
-| Job completed | `JobService.CompleteJobAsync` | Both parties |
-| Admin verifies handyman | `AdminService` / `HandymanService` | Handyman |
-| Client leaves review | `ReviewService.CreateReviewAsync` | Handyman |
+**Application — `INotificationService` / `NotificationService`:**
+- `CreateAsync(string userId, NotificationType type, string title, string message)`
+- `GetUserNotificationsAsync(string userId)` — last 20, newest first
+- `MarkAsReadAsync(int id, string userId)`
+- `MarkAllAsReadAsync(string userId)`
 
 **Web — Controller:** `NotificationsController`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/notifications` | Authenticated | Get recent notifications |
-| GET | `/api/notifications/unread-count` | Authenticated | Get unread count |
-| POST | `/api/notifications/{id}/read` | Authenticated | Mark one as read |
-| POST | `/api/notifications/read-all` | Authenticated | Mark all as read |
+| GET | `/api/notifications` | Authenticated | Recent notifications |
+| PUT | `/api/notifications/{id}/read` | Authenticated | Mark one as read |
+| PUT | `/api/notifications/read-all` | Authenticated | Mark all as read |
 
 **Frontend:**
-- `NotificationBell.jsx` — icon with unread badge in navbar, polls `/api/notifications/unread-count` every 30s
-- `NotificationDropdown.jsx` — dropdown list of recent notifications, mark as read on click
-- Notifications are fetched on dropdown open
+- `NotificationBell.jsx` — in navbar, polls unread count every 30s
+- `NotificationDropdown.jsx` — list with mark-as-read on click
 
 ---
 
-### Feature 5.2 — UI Polish & Cross-Cutting
+### Feature 5.2 — Profile Editing & UI Polish
+
+**Application:**
+- `UsersController`: `GET /api/users/me`, `PUT /api/users/me`, `PUT /api/users/me/password`
 
 **Frontend:**
-- Consistent design system: unified color palette, typography, spacing
-- `LoadingSpinner.jsx` — shown during API calls
-- `EmptyState.jsx` — shown when lists are empty (with helpful message)
-- `ErrorMessage.jsx` — shown on API errors
-- All forms show inline validation errors
-- `NotFoundPage.jsx` — custom 404 page
-- `ErrorPage.jsx` — generic error boundary page
-- Fully responsive layout (mobile-first, works on 320px+)
-- Navbar is responsive (hamburger menu on mobile)
+- `ProfilePage.jsx` — edit name, phone, profile picture URL + password change form
+- `LoadingSpinner.jsx`, `EmptyState.jsx`, `ErrorMessage.jsx` — reusable state components
+- `NotFoundPage.jsx` — custom 404
 
 **Backend:**
-- Global exception handling middleware — catches unhandled exceptions, returns consistent JSON error response
-- `ProblemDetails` format for all API errors
-- Input sanitization middleware for XSS prevention
-- Rate limiting on auth endpoints (login, register)
-- Paging, sorting, and searching implemented on: `GET /api/handymen`, `GET /api/admin/users`, `GET /api/admin/jobs`
+- Global exception handling middleware — consistent JSON error responses
+- Rate limiting on auth endpoints
+
+---
+
+## Phase 5.3 — Admin Dashboard Expansion
+
+### Feature 5.3.1 — Platform Statistics
+
+**Backend:** `GET /api/admin/stats` → `AdminStatsDto`
+- Loads all users via `UserManager.Users`, categorizes by role
+- Counts `HandymanProfile` records where `IsVerified = false` (pending)
+- Counts jobs by status from `DbContext.Jobs`
+- Calculates platform average rating from all reviews
+
+**Frontend:** `AdminDashboardPage.jsx`
+- Stat cards: Потребители, Майстори, Верифицирани, Чакащи, Поръчки, Отворени, В процес, Завършени, Отзиви, Средна оценка
+- Recent jobs panel: first 5 from `GET /api/admin/jobs`
+- Recent reviews panel: first 5 from `GET /api/admin/reviews`
+- Quick action links to all admin sub-pages
+- Admin redirected here from `DashboardPage.jsx` when role === 'Administrator'
+
+---
+
+### Feature 5.3.2 — User Detail Drawer
+
+**Backend:** `GET /api/admin/users/{id}` → `AdminUserDetailDto`
+- If Handyman: load `HandymanProfile` with `Include(SubCategories).ThenInclude(SubCategory)` and `.Include(Cities).ThenInclude(City)`
+- If Client: count `Jobs` where `ClientId == id` grouped by status
+
+**Frontend:** `UserDrawer` sub-component inside `AdminUsersPage.jsx`
+- Renders as a fixed right-side panel (400px) when `selectedId` is set
+- Shows: avatar with initials, full name, role badge, ban status, email, phone, registered date
+- Handyman section: verified status, avg rating with stars, years exp, subcategory chips (amber), city chips (blue)
+- Client section: total jobs, completed jobs
+- Ban/Unban button calls existing ban/unban endpoints; updates table row inline
+
+---
+
+### Feature 5.3.3 — Sorting on Admin Tables
+
+**Backend:** query params `sortBy` + `sortDir` on jobs and reviews endpoints
+- Jobs sort switch: `(sortBy.ToLower(), sortDir == "asc")` → `title/budget/status/createdAt`
+- Reviews sort switch: `createdAt/rating/handymanName`
+
+**Frontend:**
+- `AdminJobsPage.jsx` — sort dropdown: Дата ↓, Дата ↑, Заглавие А-Я, Заглавие Я-А, Бюджет ↓, Бюджет ↑, Статус ↓
+- `AdminReviewsPage.jsx` — sort dropdown: Дата ↓, Дата ↑, Оценка ↓, Оценка ↑, Майстор А-Я
 
 ---
 
 ## Unit Tests (HelpMe.Tests)
 
-Tests are written alongside each phase. Target: **70%+ coverage on Application layer.**
+Tests written with NUnit + Moq targeting the Application layer.
 
-**Per service, test:**
-- Happy path (expected successful outcome)
-- Invalid input (validation failures)
-- Unauthorized access (wrong user trying to act)
-- Edge cases (e.g. duplicate interest, review on non-completed job)
-
-**Services to test (minimum):**
+**Services to test:**
 - `JobService` — create, cancel, select, confirm, decline, complete
 - `JobInterestService` — submit interest, duplicate prevention
 - `HandymanService` — create/update profile, verify
-- `ReviewService` — create review, respond, rating calculation
+- `ReviewService` — create review, rating recalculation
 - `NotificationService` — creation, mark as read
-- `CategoryService` — CRUD, deactivate
 
 **Pattern:**
 ```
@@ -563,23 +479,35 @@ Tests are written alongside each phase. Target: **70%+ coverage on Application l
 
 ---
 
-## Security Checklist (applied throughout all phases)
+## Security Checklist
 
 | Threat | Mitigation |
 |--------|-----------|
 | SQL Injection | EF Core parameterized queries — never raw SQL with user input |
-| XSS | Input sanitization middleware; React escapes output by default |
-| CSRF | SameSite cookie policy; antiforgery tokens on state-changing endpoints |
-| Parameter Tampering | Always validate ownership server-side (clientId from token, not request body) |
-| Unauthorized Access | `[Authorize]` + role checks on every protected endpoint |
-| Mass Assignment | Always use DTOs — never bind directly to entity models |
+| XSS | React escapes output by default; input sanitization middleware |
+| Parameter Tampering | Ownership validated server-side (userId from JWT, not request body) |
+| Unauthorized Access | `[Authorize]` + `[Authorize(Roles = "...")]` on all protected endpoints |
+| Mass Assignment | DTOs only — never bind directly to entity models |
+| Token Security | JWT with expiry; stored in localStorage |
+
+---
+
+## Design System (`helpme-frontend/src/theme.js`)
+
+| Token | Value |
+|-------|-------|
+| Background | `#f8fafc` |
+| Card background | `#ffffff` |
+| Card border | `#e2e8f0` |
+| Brand accent | `#f59e0b` (amber) |
+| Navbar | `#0f172a` (dark slate) |
+| Body font | Inter |
+| Heading font | Syne |
 
 ---
 
 ## GitHub Workflow
 
-- Public repository from day 1 with `README.md` (project description, setup instructions)
-- Commit after completing each feature — aim for 1–3 commits per feature
-- Minimum: 25 commits across 7+ different days
-- Branch strategy: `main` (stable) + feature branches per phase (optional but recommended)
-- README includes: project description, tech stack, how to run locally, screenshots (added progressively)
+- Public repository, `main` branch, 25+ commits across 7+ days
+- `README.md` includes: project description, tech stack, how to run, test accounts, seed data, API reference
+- Commit message convention: `feat: <what was done> (Phase X.X)`

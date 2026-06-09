@@ -2,19 +2,19 @@
 
 ## Overview
 
-**HelpMe** is a Bulgarian marketplace platform that connects clients with verified handymen (professionals offering home services). Clients post service requests, handymen express interest and propose a price, and the client selects the best fit. The platform covers a wide range of home services — plumbing, electrical, painting, cleaning, moving, gardening, AC installation, and more.
+**HelpMe** е Bulgarian marketplace платформа, която свързва клиенти с верифицирани майстори за домашни услуги — ВиК, електро, боядисване, шпакловка, паркет, климатизация, дограма и много други. Клиентите публикуват заявки, майсторите изразяват интерес с предложена цена, клиентът избира — работата започва.
 
 ---
 
 ## User Roles
 
 | Role | Description |
-|---|---|
-| **Client** | Posts service requests, communicates with handymen, selects and reviews handymen |
-| **Handyman** | Creates a professional profile, expresses interest in jobs, proposes prices, confirms assignments |
-| **Admin** | Verifies handymen, manages categories and areas, moderates users and content, views platform activity |
+|------|-------------|
+| **Client** | Публикува заявки, разглежда кандидати, избира майстор, оставя отзиви |
+| **Handyman** | Изгражда профил, изразява интерес в поръчки, потвърждава назначения, отговаря на отзиви |
+| **Administrator** | Верифицира майстори, управлява потребители, модерира поръчки и отзиви, следи статистики |
 
-All users must provide: first name, last name, phone number, and email upon registration.
+При регистрация всеки потребител предоставя: собствено и фамилно име, телефонен номер, имейл и парола.
 
 ---
 
@@ -22,220 +22,203 @@ All users must provide: first name, last name, phone number, and email upon regi
 
 ```
 Отворена
-  └─► Изчакване на потвърждение  (client selected a handyman)
-        └─► В процес              (handyman confirmed)
+  └─► Изчакване на потвърждение   (клиентът избра майстор)
+        └─► В процес               (майсторът потвърди)
               ├─► Завършена
               └─► Отменена
-  └─► Отменена                   (client cancels before selection)
+  └─► Отменена                    (клиентът отмени преди избор)
 ```
 
-- A job remains **Отворена** until the client selects a handyman — multiple handymen can express interest simultaneously.
-- A client can have **multiple active jobs** at the same time.
-- A handyman can be interested in or assigned to **multiple jobs** at the same time.
-- If no handyman expresses interest within **48 hours**, the system automatically expands the geographic zone and notifies the client.
-- After the client selects a handyman, the handyman must **confirm** within a reasonable window — only then does the job move to "В процес".
+- Поръчката остава **Отворена** докато клиентът избере майстор — множество майстори могат едновременно да изразят интерес.
+- Клиент може да има **множество активни поръчки** едновременно.
+- Майстор може да участва в **множество поръчки** едновременно.
+- След избор майсторът трябва да **потвърди** — само тогава поръчката преминава в "В процес".
+- При отказ на майстора поръчката се връща в "Отворена" и всички интереси се resetват.
 
 ---
 
-## Not-For-Build Features
-*(Documented for future development — must NOT be implemented in current scope)*
+## Phase 1 — Foundation: Auth & Core Structure
 
-- **Real-time chat** (SignalR) — planned as a future communication layer
-- **Document upload** for handyman verification — Admin verification is manual for now
-- **Stripe subscription payments** — handyman subscriptions are managed manually/externally for now
-- **Email notifications** — in-app notifications only
-- **Auto-expand geographic zone** after 48h inactivity — logic defined but not implemented
-- **Grace period** (2 days post-subscription expiry) — defined but not enforced
-- **Admin analytics dashboard** (charts, revenue stats) — Admin has table views only
-- **Mobile application**
-- **SMS notifications**
-- **Dispute resolution system**
-- **Insurance/guarantee integrations**
-- **Promotions and featured listings for handymen**
+### Реализирано
 
-The platform must function **fully and correctly** without any of the above features.
+**Регистрация и вход**
+- Потребителят избира роля при регистрация (Client / Handyman)
+- Предоставя: собствено и фамилно име, имейл, телефон, парола
+- Влизане с JWT токен; токенът се пази в localStorage
+- Паролите са хеширани от ASP.NET Core Identity
 
----
-
-## Phase 1 — Foundation: Authentication & Core Structure
-
-### Goal
-A working, navigable application with user registration, login, and role-based access.
-
-### Functional Requirements
-
-**Registration & Login**
-- User can register as a Client or Handyman
-- User provides: first name, last name, email, phone number, password, role
-- User can log in and log out
-- Sessions are maintained securely
-- Passwords are hashed
-
-**Role-based Access**
-- Clients, Handymen, and Admins see different navigation and pages
-- Protected routes redirect unauthenticated users to login
-- Admin account is seeded in the database
+**Role-based достъп**
+- Клиенти, майстори и админи виждат различна навигация и страници
+- Защитените маршрути пренасочват към `/login` при липса на автентикация
+- `ProtectedRoute` поддържа ограничение по роля (`roles` prop)
+- Admin акаунт е seed-нат в базата
 
 **Frontend**
-- Register page with role selection
-- Login page
-- Basic navigation bar (role-aware)
-- Protected route handling
-- Auth state management (context/store)
+- `LoginPage` / `RegisterPage` с форма за избор на роля
+- `AuthContext` — пази current user, `login()`, `logout()`
+- `Navbar` — dark slate, amber logo, avatar с инициали, dropdown меню с profil + logout
 
 ---
 
 ## Phase 2 — Handyman Profiles & Categories
 
-### Goal
-Handymen can build their professional profile. Admins manage the service taxonomy. The platform has browsable categories and handyman listings.
+### Реализирано
 
-### Functional Requirements
+**Профил на майстора**
+- Биография, години опит, снимка (URL)
+- Избор на подкатегории на услугите (многократен избор)
+- Избор на градове (многократен избор)
+- Профилът е публично видим след верификация от Admin
+- Неверифицираните майстори виждат съобщение за изчакване
 
-**Handyman Profile**
-- After registration, handyman completes their profile: bio, years of experience, profile picture
-- Handyman selects one or more **service categories** they work in
-- Handyman selects one or more **areas/cities** they serve
-- Profile is visible publicly once the Admin has verified the handyman
-- Unverified handymen can log in but cannot receive job requests
+**Категории и подкатегории**
+- 10 категории (Електро, ВиК, Шпакловка/Боядисване, Дограма, Облицовки, Отопление, Сухо строителство и др.)
+- 50+ подкатегории, seed-нати при стартиране
+- Дървовидна структура: `ServiceCategory` → `ServiceSubCategory`
 
-**Service Categories**
-- Categories have a name, icon/emoji, and optional description
-- Categories support a parent-child hierarchy (e.g. "Ремонти" → "ВиК", "Електро")
-- Admin can create, edit, and deactivate categories
+**Региони и градове**
+- Всички български области и основни градове seed-нати
+- `Region` → `City` модел
+- При създаване на поръчка клиентът избира град
 
-**Areas**
-- Areas represent Bulgarian cities/regions (seeded in DB)
-- Handyman selects which areas they are willing to work in
-- Admin can manage the list of areas
-
-**Admin — Handyman Verification**
-- Admin sees a list of unverified handymen
-- Admin can approve or reject a handyman
-- Rejected handymen receive an in-app notification
+**Верификация (Admin)**
+- Admin вижда списък с неверифицирани майстори
+- Може да одобри или отхвърли
+- Отхвърленият майстор получава in-app нотификация
 
 **Frontend**
-- Handyman profile edit page
-- Public handyman profile view page (bio, categories, rating, reviews)
-- Admin panel: category management (CRUD)
-- Admin panel: handyman verification queue
-- Browsable handyman listing (filterable by category and area)
+- `HandymanPublicProfilePage` — биография, оценка, специалности, градове, отзиви
+- `HandymanListPage` — директория с търсене по име/специалност/град, responsive grid от карти
+- `AdminVerificationPage` — опашка за верификация с approve/reject
 
 ---
 
-## Phase 3 — Jobs: The Core Flow
+## Phase 3 — Jobs: Core Flow
 
-### Goal
-The full job lifecycle works end-to-end: posting, interest, selection, confirmation, and completion.
+### Реализирано
 
-### Functional Requirements
+**Създаване на поръчка (Client)**
+- 3-стъпков wizard: (1) Локация — подкатегория + град; (2) Детайли — заглавие, описание, бюджет; (3) Преглед + публикуване
+- Поръчката се създава с статус "Отворена"
 
-**Creating a Job (Client)**
-- Client fills in: title, description, approximate budget, service category, area
-- Client can have multiple active jobs simultaneously
-- Job is created with status "Отворена"
-- System identifies handymen who match the category and area and notifies them (in-app)
+**Изразяване на интерес (Handyman)**
+- Feed с отворени поръчки, съответстващи на подкатегориите и градовете на майстора
+- Търсене по заглавие/категория и филтър по град
+- Майсторът подава интерес с предложена цена и незадължителна бележка
+- Не може да подаде интерес два пъти за една поръчка
 
-**Expressing Interest (Handyman)**
-- Handyman sees a list of open jobs matching their categories and areas
-- Handyman can express interest in a job by submitting a proposed price and optional note
-- Handyman can express interest in multiple jobs simultaneously
+**Избор на майстор (Client)**
+- Клиентът вижда всички кандидати с предложени цени, рейтинги и профили
+- При избор статусът на поръчката → "Изчакване на потвърждение"
+- Останалите кандидати получават нотификация
 
-**Selecting a Handyman (Client)**
-- Client sees a list of handymen who expressed interest in their job (with proposed price, profile summary, rating)
-- Client selects one handyman — job status moves to "Изчакване на потвърждение"
-- Other interested handymen are notified that the job was filled
+**Потвърждение (Handyman)**
+- Избраният майстор вижда pending назначения
+- Потвърди → "В процес"; Откаже → поръчката се връща в "Отворена"
 
-**Confirming the Job (Handyman)**
-- Selected handyman sees pending confirmation requests
-- Handyman confirms → job moves to "В процес"
-- Handyman declines → job returns to "Отворена", client is notified
-
-**Completing a Job**
-- Either party can mark the job as complete (with the other party's agreement)
-- Job moves to "Завършена"
-- Client is prompted to leave a review
-
-**Cancellation**
-- Client can cancel a job at any status before "В процес"
-- After "В процес", cancellation requires a reason
+**Завършване и отмяна**
+- Клиентът или майсторът може да завърши поръчка
+- Клиентът може да отмени преди "В процес"
 
 **Frontend**
-- Job creation form (multi-step: category → details → location → review)
-- Client's active jobs dashboard
-- Handyman's job feed (filtered by their categories and areas)
-- Job detail page
-- List of interested handymen with prices (client view)
-- Pending confirmations list (handyman view)
+- `ClientDashboardPage` — stats карти + списък на поръчките
+- `HandymanFeedPage` — feed с търсачка и filтър по град, брой резултати
+- `JobDetailPage` — пълни детайли, форма за интерес, списък с кандидати, бутони confirm/decline
+- `PendingConfirmationsPage` — pending назначения на майстора
+- Цялата `JobCard` е кликаема (не само заглавието)
 
 ---
 
 ## Phase 4 — Reviews, Ratings & Admin Dashboard
 
-### Goal
-Trust and quality signals are visible across the platform. Admin has full moderation control.
+### Реализирано
 
-### Functional Requirements
-
-**Reviews**
-- After a job is marked "Завършена", the client can leave one review per job
-- Review includes: star rating (1–5) and written comment
-- Handyman can publicly respond to a review (one response per review)
-- Reviews are visible on the handyman's public profile
-- Handyman's overall rating is the average of all received ratings, displayed with review count
+**Отзиви**
+- След "Завършена" клиентът оставя един отзив: 1–5 звезди + коментар
+- Средната оценка на майстора се преизчислява автоматично
+- Отзивите са видими на публичния профил с дата и звезди
 
 **Admin Dashboard**
-- Admin sees all users (Clients and Handymen) with ability to ban/unban
-- Admin sees all jobs with their current status
-- Admin sees all reviews with ability to remove inappropriate content
-- Admin can manage (add/edit/deactivate) service categories and areas
+- Управление на потребители: търсене, ban/unban
+- Преглед на всички поръчки с филтър по статус
+- Преглед и изтриване на отзиви
 
 **Frontend**
-- Review form (shown after job completion)
-- Star rating display on handyman profiles and listings
-- Review list on handyman profile (with responses)
-- Admin panel: user management table (ban/unban)
-- Admin panel: jobs overview table
-- Admin panel: reviews moderation table
+- `ReviewForm` — звездичков selector + текстово поле
+- `StarRating` — reusable display компонент
+- `ReviewList` — списък с отзиви на профила
+- `AdminLayout` — sidebar навигация за admin секцията
+- `AdminUsersPage`, `AdminJobsPage`, `AdminReviewsPage` — таблици с действия
 
 ---
 
-## Phase 5 — In-App Notifications & UI Polish
+## Phase 5 — Notifications, Profile Editing & UI Polish
 
-### Goal
-Users are always informed of important events. The platform feels complete and polished.
+### Реализирано
 
-### Functional Requirements
+**Нотификации**
 
-**Notifications**
-- In-app notifications are triggered by the following events:
+| Събитие | Получател |
+|---------|----------|
+| Майстор изрази интерес | Клиент |
+| Клиент избра майстор | Избраният майстор |
+| Клиент избра майстор | Останалите кандидати |
+| Майсторът потвърди | Клиент |
+| Майсторът отказа | Клиент |
+| Поръчката е завършена | И двете страни |
+| Admin верифицира/отхвърля | Майстор |
+| Клиент остави отзив | Майстор |
 
-| Event | Recipient |
-|---|---|
-| Handyman expresses interest in a job | Client |
-| Client selects a handyman | Selected handyman |
-| Client selects a handyman | Other interested handymen (job filled) |
-| Handyman confirms the job | Client |
-| Handyman declines the job | Client |
-| Job is marked as complete | Both parties |
-| Admin verifies/rejects handyman | Handyman |
-| Client leaves a review | Handyman |
+- Notification bell с unread badge в navbar
+- Dropdown с последните нотификации
+- Маркиране като прочетено (индивидуално и всички)
 
-- Notifications are shown in a dropdown bell icon in the navbar
-- Unread notifications show a badge count
-- User can mark individual notifications as read or mark all as read
+**Редактиране на профил (всички роли)**
+- Собствено/фамилно ime, телефон, снимка (URL)
+- Смяна на парола (с валидация на текущата)
+- `PUT /api/users/me` и `PUT /api/users/me/password`
 
 **UI Polish**
-- Fully responsive design (mobile-friendly)
-- Consistent design system across all pages
-- Loading states and empty states for all lists
-- Error messages for failed actions
-- Form validation feedback
-- 404 and error pages
+- `LoadingSpinner`, `EmptyState`, `ErrorMessage` — reusable компоненти
+- `NotFoundPage` — custom 404
+- Глобален exception handler в backend
+- Rate limiting на auth ендпоинтите
 
-**Frontend**
-- Notification bell with badge in navbar
-- Notification dropdown with list of recent notifications
-- Mark as read functionality
-- Responsive layout across all existing pages
-- Unified component library (buttons, cards, forms, badges)
+---
+
+## Phase 5.3 — Admin Dashboard Expansion
+
+### Реализирано
+
+**Статистики**
+- `GET /api/admin/stats` — реално-времеви данни: общо потребители, майстори, верифицирани, чакащи верификация, поръчки по статус, средна оценка
+- `AdminDashboardPage` — landing страница при логване като Admin с stat cards, последни поръчки и отзиви, бързи действия
+
+**Разглеждане на потребители**
+- `GET /api/admin/users/{id}` — детайлен профил
+- Кликване на ред в таблицата отваря drawer от дясно с:
+  - Лична информация (имейл, телефон, дата на регистрация)
+  - За майстори: верификация, рейтинг, специалности, градове
+  - За клиенти: общо поръчки, завършени
+  - Ban/unban директно от drawer-а
+
+**Сортиране**
+- Поръчки: по дата, заглавие, бюджет, статус (↑/↓)
+- Отзиви: по дата, оценка (1→5 / 5→1), майстор А-Я
+
+---
+
+## Not-For-Build Features
+*(Документирани за бъдещо развитие — не са имплементирани)*
+
+- **Real-time chat** (SignalR) — планиран като бъдещ комуникационен слой
+- **Document upload** за верификация — Admin верифицира ръчно
+- **Stripe subscription payments** — управлява се extern
+- **Email notifications** — само in-app
+- **Auto-expand geographic zone** след 48ч — логиката е дефинирана, не е реализирана
+- **Admin charts / analytics** — таблични изгледи покриват нуждите
+- **Мобилно приложение** — бъдещ milestone
+- **SMS нотификации** — Twilio интеграция отложена
+- **Dispute resolution** — бъдещ milestone
+
+Платформата **функционира пълноценно** без горните функционалности.
