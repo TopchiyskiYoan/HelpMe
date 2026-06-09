@@ -2,47 +2,40 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api.js'
 import JobCard from '../components/JobCard.jsx'
+import { t } from '../theme.js'
 
 const s = {
-  page: { padding: '2rem', flex: 1, background: '#fffbf0' },
+  page: { ...t.fullPage },
+  inner: { maxWidth: '860px', margin: '0 auto' },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '1.5rem',
-    flexWrap: 'wrap',
-    gap: '0.75rem',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: '24px', flexWrap: 'wrap', gap: '0.75rem',
   },
+  titleBlock: {},
   title: {
     fontFamily: "'Syne', system-ui, sans-serif",
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#1c1917',
-    letterSpacing: '-0.03em',
+    fontSize: '26px', fontWeight: 800, color: t.text, letterSpacing: '-0.03em',
   },
+  subtitle: { fontSize: '13px', color: t.textMuted, marginTop: '3px' },
   link: {
-    fontSize: '13px',
-    fontWeight: 600,
-    color: '#d97706',
-    textDecoration: 'none',
+    fontSize: '13px', fontWeight: 600, color: t.amberDark, textDecoration: 'none',
+    padding: '7px 14px', border: `1px solid ${t.amberBorder}`, borderRadius: t.radius,
+    background: t.amberBg,
   },
-  list: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
   empty: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    color: '#78350f',
-    fontSize: '15px',
-    lineHeight: 1.7,
+    textAlign: 'center', padding: '5rem 2rem',
+    color: t.textMuted, fontSize: '15px', lineHeight: 1.8,
   },
-  emptyIcon: { fontSize: '40px', marginBottom: '12px', display: 'block' },
+  emptyIcon: { fontSize: '44px', marginBottom: '14px', display: 'block' },
   error: {
-    color: '#dc2626',
-    fontSize: '14px',
-    padding: '10px 14px',
-    background: '#fee2e2',
-    borderRadius: '8px',
-    border: '1px solid #fecaca',
-    textAlign: 'center',
+    color: t.redText, fontSize: '14px', padding: '11px 14px',
+    background: t.redBg, borderRadius: t.radius, border: `1px solid ${t.redBorder}`,
+  },
+  notVerified: {
+    padding: '16px 20px', borderRadius: t.radius,
+    background: t.amberBg, border: `1px solid ${t.amberBorder}`,
+    color: t.amberText, fontSize: '14px', fontWeight: 500,
   },
 }
 
@@ -50,37 +43,51 @@ export default function HandymanFeedPage() {
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notVerified, setNotVerified] = useState(false)
 
   useEffect(() => {
     api.get('/jobs/feed')
       .then(setJobs)
-      .catch(() => setError('Грешка при зареждане. Уверете се, че профилът ви е верифициран.'))
+      .catch((err) => {
+        if (err.status === 403) setNotVerified(true)
+        else setError('Грешка при зареждане.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
   return (
     <div style={s.page}>
-      <div style={s.header}>
-        <div style={s.title}>Налични поръчки</div>
-        <Link to="/handymen/me/interests" style={s.link}>Моите оферти →</Link>
-      </div>
+      <div style={s.inner}>
+        <div style={s.header}>
+          <div style={s.titleBlock}>
+            <div style={s.title}>Налични поръчки</div>
+            <div style={s.subtitle}>{jobs.length > 0 ? `${jobs.length} поръчки, съответстващи на профила ви` : 'Поръчки, подходящи за вашите услуги'}</div>
+          </div>
+          <Link to="/handymen/me/interests" style={s.link}>Моите оферти →</Link>
+        </div>
 
-      {loading && <div style={s.empty}>Зареждане...</div>}
-      {error && <div style={s.error}>{error}</div>}
-      {!loading && !error && jobs.length === 0 && (
-        <div style={s.empty}>
-          <span style={s.emptyIcon}>📋</span>
-          Няма отворени поръчки, съответстващи на вашия профил.<br />
-          <span style={{ fontSize: '13px', color: '#78350f' }}>
-            Уверете се, че сте добавили подкатегории и населени места в профила си.
-          </span>
-        </div>
-      )}
-      {!loading && !error && (
-        <div style={s.list}>
-          {jobs.map(job => <JobCard key={job.id} job={job} />)}
-        </div>
-      )}
+        {loading && <div style={s.empty}>Зареждане...</div>}
+        {error && <div style={s.error}>{error}</div>}
+        {notVerified && (
+          <div style={s.notVerified}>
+            ⏳ Вашият профил е в процес на верификация. Ще получите известие, когато бъде одобрен.
+          </div>
+        )}
+        {!loading && !notVerified && !error && jobs.length === 0 && (
+          <div style={s.empty}>
+            <span style={s.emptyIcon}>🔍</span>
+            Няма отворени поръчки за вашите специалности в момента.<br />
+            <span style={{ fontSize: '13px', color: t.textMuted }}>
+              Уверете се, че сте добавили подкатегории и населените места, в които работите.
+            </span>
+          </div>
+        )}
+        {!loading && !notVerified && !error && (
+          <div style={s.list}>
+            {jobs.map(job => <JobCard key={job.id} job={job} />)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

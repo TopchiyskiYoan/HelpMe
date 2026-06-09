@@ -2,56 +2,55 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api.js'
 import JobCard from '../components/JobCard.jsx'
+import { t } from '../theme.js'
 
 const s = {
-  page: { padding: '2rem', flex: 1, background: '#fffbf0' },
+  page: { ...t.fullPage },
+  inner: { maxWidth: '860px', margin: '0 auto' },
   header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '1.5rem',
-    flexWrap: 'wrap',
-    gap: '0.75rem',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: '28px', flexWrap: 'wrap', gap: '0.75rem',
   },
   title: {
     fontFamily: "'Syne', system-ui, sans-serif",
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#1c1917',
-    letterSpacing: '-0.03em',
+    fontSize: '26px', fontWeight: 800, color: t.text, letterSpacing: '-0.03em',
   },
   btnNew: {
-    padding: '9px 20px',
-    borderRadius: '8px',
-    border: 'none',
-    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
-    color: '#fff',
-    fontSize: '13px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    textDecoration: 'none',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '4px',
-    boxShadow: '0 3px 10px rgba(217,119,6,0.3)',
+    ...t.btnPrimary, textDecoration: 'none', display: 'inline-flex',
+    alignItems: 'center', gap: '5px', fontSize: '13.5px',
   },
-  list: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
   empty: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    color: '#78350f',
-    fontSize: '15px',
-    lineHeight: 1.7,
+    textAlign: 'center', padding: '5rem 2rem',
+    color: t.textMuted, fontSize: '15px', lineHeight: 1.8,
   },
-  emptyIcon: { fontSize: '40px', marginBottom: '12px', display: 'block' },
+  emptyIcon: { fontSize: '44px', marginBottom: '14px', display: 'block' },
   error: {
-    color: '#dc2626',
-    fontSize: '14px',
-    padding: '10px 14px',
-    background: '#fee2e2',
-    borderRadius: '8px',
-    border: '1px solid #fecaca',
+    color: t.redText, fontSize: '14px', padding: '11px 14px',
+    background: t.redBg, borderRadius: t.radius, border: `1px solid ${t.redBorder}`,
   },
+  statsRow: {
+    display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+    gap: '14px', marginBottom: '28px',
+  },
+  stat: {
+    background: t.card, border: `1px solid ${t.border}`,
+    borderRadius: t.radius, padding: '16px 18px',
+    boxShadow: t.shadow,
+  },
+  statNum: {
+    fontFamily: "'Syne', system-ui, sans-serif",
+    fontSize: '28px', fontWeight: 800, color: t.text, letterSpacing: '-0.03em',
+  },
+  statLabel: { fontSize: '12px', color: t.textMuted, marginTop: '2px' },
+}
+
+const STATUS_LABELS = {
+  Open: 'Отворени',
+  InProgress: 'В процес',
+  Completed: 'Завършени',
+  Cancelled: 'Отменени',
+  AwaitingConfirmation: 'Чакат потвърждение',
 }
 
 export default function ClientDashboardPage() {
@@ -66,29 +65,44 @@ export default function ClientDashboardPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const counts = jobs.reduce((acc, j) => ({ ...acc, [j.status]: (acc[j.status] || 0) + 1 }), {})
+
   return (
     <div style={s.page}>
-      <div style={s.header}>
-        <div style={s.title}>Моите поръчки</div>
-        <Link to="/jobs/create" style={s.btnNew}>+ Нова поръчка</Link>
-      </div>
+      <div style={s.inner}>
+        <div style={s.header}>
+          <div style={s.title}>Моите поръчки</div>
+          <Link to="/jobs/create" style={s.btnNew}>+ Нова поръчка</Link>
+        </div>
 
-      {loading && <div style={s.empty}>Зареждане...</div>}
-      {error && <div style={s.error}>{error}</div>}
-      {!loading && !error && jobs.length === 0 && (
-        <div style={s.empty}>
-          <span style={s.emptyIcon}>🔧</span>
-          Нямате поръчки все още.<br />
-          <Link to="/jobs/create" style={{ color: '#d97706', fontWeight: 600 }}>
-            Публикувайте първата си поръчка →
-          </Link>
-        </div>
-      )}
-      {!loading && !error && (
-        <div style={s.list}>
-          {jobs.map(job => <JobCard key={job.id} job={job} />)}
-        </div>
-      )}
+        {!loading && !error && jobs.length > 0 && (
+          <div style={s.statsRow}>
+            {Object.entries(counts).map(([status, count]) => (
+              <div key={status} style={s.stat}>
+                <div style={s.statNum}>{count}</div>
+                <div style={s.statLabel}>{STATUS_LABELS[status] ?? status}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loading && <div style={s.empty}>Зареждане...</div>}
+        {error && <div style={s.error}>{error}</div>}
+        {!loading && !error && jobs.length === 0 && (
+          <div style={s.empty}>
+            <span style={s.emptyIcon}>📋</span>
+            Нямате поръчки все още.<br />
+            <Link to="/jobs/create" style={{ color: t.amberDark, fontWeight: 600, textDecoration: 'none' }}>
+              Публикувайте първата си поръчка →
+            </Link>
+          </div>
+        )}
+        {!loading && !error && (
+          <div style={s.list}>
+            {jobs.map(job => <JobCard key={job.id} job={job} />)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -3,6 +3,7 @@ using HelpMe.Application.DTOs;
 using HelpMe.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HelpMe.Web.Controllers;
 
@@ -18,6 +19,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
         var result = await _authService.RegisterAsync(dto);
@@ -37,12 +39,17 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
         var result = await _authService.LoginAsync(dto);
 
         if (!result.Succeeded)
-            return Unauthorized(new { message = "Invalid email or password." });
+        {
+            if (result.ErrorCode == "ACCOUNT_BANNED")
+                return Unauthorized(new { message = "Акаунтът ви е заблокиран. Свържете се с поддръжката." });
+            return Unauthorized(new { message = "Невалиден имейл или парола." });
+        }
 
         return Ok(result.Data);
     }

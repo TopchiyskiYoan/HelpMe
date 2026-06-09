@@ -1,27 +1,24 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api.js'
-import { STATUS_LABELS, STATUS_COLORS } from '../utils/jobStatus.js'
+import { t } from '../theme.js'
 
 const s = {
-  page: { padding: '2rem', flex: 1, background: '#fffbf0' },
+  page: { ...t.fullPage },
+  inner: { maxWidth: '760px', margin: '0 auto' },
+  header: { marginBottom: '28px' },
   title: {
     fontFamily: "'Syne', system-ui, sans-serif",
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#1c1917',
-    letterSpacing: '-0.03em',
-    marginBottom: '1.5rem',
+    fontSize: '26px', fontWeight: 800, color: t.text,
+    letterSpacing: '-0.03em', marginBottom: '4px',
   },
-  list: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  subtitle: { fontSize: '13.5px', color: t.textMuted },
+  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
   empty: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    color: '#78350f',
-    fontSize: '15px',
-    lineHeight: 1.7,
+    textAlign: 'center', padding: '5rem 2rem',
+    color: t.textMuted, fontSize: '15px', lineHeight: 1.8,
   },
-  emptyIcon: { fontSize: '40px', marginBottom: '12px', display: 'block' },
+  emptyIcon: { fontSize: '44px', marginBottom: '14px', display: 'block' },
 }
 
 export default function PendingConfirmationsPage() {
@@ -37,72 +34,72 @@ export default function PendingConfirmationsPage() {
 
   return (
     <div style={s.page}>
-      <div style={s.title}>Чакащи потвърждение</div>
+      <div style={s.inner}>
+        <div style={s.header}>
+          <div style={s.title}>Чакащи потвърждение</div>
+          <div style={s.subtitle}>Поръчки, за които сте избрани — потвърдете или откажете</div>
+        </div>
 
-      {loading && <div style={s.empty}>Зареждане...</div>}
-      {!loading && interests.length === 0 && (
-        <div style={s.empty}>
-          <span style={s.emptyIcon}>✅</span>
-          Няма поръчки, чакащи вашето потвърждение.
-        </div>
-      )}
-      {!loading && (
-        <div style={s.list}>
-          {interests.map(i => (
-            <InterestCard key={i.id} interest={i} />
-          ))}
-        </div>
-      )}
+        {loading && <div style={s.empty}>Зареждане...</div>}
+        {!loading && interests.length === 0 && (
+          <div style={s.empty}>
+            <span style={s.emptyIcon}>✅</span>
+            Няма поръчки, чакащи вашето потвърждение.
+          </div>
+        )}
+        {!loading && (
+          <div style={s.list}>
+            {interests.map(i => <InterestCard key={i.id} interest={i} />)}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function InterestCard({ interest }) {
+function InterestCard({ interest: i }) {
   const [hovered, setHovered] = useState(false)
-
-  const card = {
-    border: `1px solid ${hovered ? '#fbbf24' : '#fde68a'}`,
-    borderRadius: '12px',
-    padding: '16px 20px',
-    background: '#ffffff',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: '1rem',
-    flexWrap: 'wrap',
-    textAlign: 'left',
-    boxShadow: hovered ? '0 6px 20px rgba(217,119,6,0.14)' : '0 2px 8px rgba(217,119,6,0.07)',
-    transition: 'all 0.18s ease',
-    transform: hovered ? 'translateY(-1px)' : 'none',
-  }
 
   return (
     <div
-      style={card}
+      style={{
+        border: `1px solid ${hovered ? t.amberBorder : t.border}`,
+        borderRadius: t.radius,
+        padding: '18px 22px',
+        background: t.card,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '1rem',
+        flexWrap: 'wrap',
+        boxShadow: hovered ? t.shadowMd : t.shadow,
+        transition: 'all 0.18s ease',
+        transform: hovered ? 'translateY(-1px)' : 'none',
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
         <Link
-          to={`/jobs/${interest.jobId}`}
-          style={{ fontSize: '15px', fontWeight: 700, color: '#1c1917', letterSpacing: '-0.01em', textDecoration: 'none' }}
+          to={`/jobs/${i.jobId}`}
+          style={{ fontSize: '15px', fontWeight: 700, color: t.text, letterSpacing: '-0.01em', textDecoration: 'none' }}
         >
-          Поръчка #{interest.jobId}
+          Поръчка #{i.jobId}
         </Link>
-        <div style={{ fontSize: '13px', color: '#78350f' }}>Вашата оферта: <strong>{interest.proposedPrice} лв.</strong></div>
+        <div style={{ fontSize: '13px', color: t.textMuted }}>
+          Вашата оферта: <span style={{ fontWeight: 700, color: t.amberDark }}>{i.proposedPrice} лв.</span>
+        </div>
       </div>
-      <span style={{
-        fontSize: '11px',
-        fontWeight: 600,
-        padding: '4px 12px',
-        borderRadius: '20px',
-        background: STATUS_COLORS['AwaitingConfirmation'].bg,
-        color: STATUS_COLORS['AwaitingConfirmation'].color,
-        border: `1px solid ${STATUS_COLORS['AwaitingConfirmation'].border}`,
-        whiteSpace: 'nowrap',
-      }}>
-        {STATUS_LABELS['AwaitingConfirmation']}
-      </span>
+
+      <Link
+        to={`/jobs/${i.jobId}`}
+        style={{
+          ...t.btnPrimary, textDecoration: 'none', display: 'inline-flex',
+          alignItems: 'center', gap: '5px', fontSize: '13px',
+        }}
+      >
+        Потвърди / Откажи →
+      </Link>
     </div>
   )
 }

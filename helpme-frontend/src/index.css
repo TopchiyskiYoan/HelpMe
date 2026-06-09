@@ -1,32 +1,18 @@
 :root {
-  /* Palette */
-  --bg: #fffbf0;
-  --bg-subtle: #fff8e6;
+  --bg: #f8fafc;
   --bg-card: #ffffff;
-  --border: #fde68a;
-  --border-strong: #fbbf24;
-  --text: #78350f;
-  --text-h: #1c1917;
-  --accent: #d97706;
-  --accent-hover: #b45309;
-  --accent-light: #f59e0b;
-  --accent-bg: #fef3c7;
-  --accent-border: #fde68a;
-  --code-bg: #fff8e6;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --accent: #f59e0b;
+  --accent-dark: #d97706;
 
-  /* Shadows — warm amber tint */
-  --shadow-sm: 0 1px 4px rgba(217, 119, 6, 0.08), 0 1px 2px rgba(28, 25, 23, 0.04);
-  --shadow-md: 0 4px 16px rgba(217, 119, 6, 0.14), 0 2px 6px rgba(28, 25, 23, 0.06);
-  --shadow-lg: 0 8px 32px rgba(217, 119, 6, 0.18), 0 4px 12px rgba(28, 25, 23, 0.08);
-
-  /* Typography */
-  --sans: 'Inter', system-ui, sans-serif;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
   --heading: 'Syne', system-ui, sans-serif;
 
   font-family: var(--sans);
   font-size: 15px;
   line-height: 1.6;
-  letter-spacing: 0.01em;
   color: var(--text);
   background: var(--bg);
   color-scheme: light;
@@ -46,10 +32,6 @@ body {
 }
 
 #root {
-  width: 1160px;
-  max-width: 100%;
-  margin: 0 auto;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
@@ -58,7 +40,7 @@ body {
 h1, h2, h3 {
   font-family: var(--heading);
   font-weight: 800;
-  color: var(--text-h);
+  color: var(--text);
   line-height: 1.15;
   letter-spacing: -0.03em;
   margin: 0;
@@ -71,13 +53,13 @@ h3 { font-size: 18px; font-weight: 700; }
 p { margin: 0; }
 
 a {
-  color: var(--accent);
+  color: var(--accent-dark);
   text-decoration: none;
 }
-a:hover { color: var(--accent-hover); }
+a:hover { color: var(--accent); }
 
 button, a, input, select, textarea {
-  transition: all 0.18s ease;
+  transition: all 0.15s ease;
 }
 
 button:focus-visible,
@@ -88,8 +70,11 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+input, select, textarea {
+  font-family: var(--sans);
+}
+
 @media (max-width: 640px) {
-  #root { border-inline: none; }
   h1 { font-size: 32px; }
   h2 { font-size: 22px; }
 }

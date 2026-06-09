@@ -19,6 +19,8 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(id);
         if (user is null) return null;
 
+        var roles = await _userManager.GetRolesAsync(user);
+
         return new UserDto
         {
             Id = user.Id,
@@ -27,7 +29,8 @@ public class UserService : IUserService
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            Role = roles.FirstOrDefault() ?? string.Empty
         };
     }
 
@@ -43,5 +46,17 @@ public class UserService : IUserService
 
         var result = await _userManager.UpdateAsync(user);
         return result.Succeeded;
+    }
+
+    public async Task<(bool Success, string? Error)> ChangePasswordAsync(string id, ChangePasswordDto dto)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user is null) return (false, "USER_NOT_FOUND");
+
+        var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+        if (!result.Succeeded)
+            return (false, "INVALID_CURRENT_PASSWORD");
+
+        return (true, null);
     }
 }

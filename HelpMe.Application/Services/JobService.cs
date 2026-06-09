@@ -8,10 +8,12 @@ namespace HelpMe.Application.Services;
 public class JobService : IJobService
 {
     private readonly IApplicationDbContext _context;
+    private readonly INotificationService _notifications;
 
-    public JobService(IApplicationDbContext context)
+    public JobService(IApplicationDbContext context, INotificationService notifications)
     {
         _context = context;
+        _notifications = notifications;
     }
 
     public async Task<JobDto> CreateAsync(string clientId, CreateJobDto dto)
@@ -130,12 +132,30 @@ public class JobService : IJobService
         }
 
         await _context.SaveChangesAsync();
+
+        await _notifications.CreateAsync(
+            selectedInterest.HandymanId,
+            NotificationType.HandymanSelected,
+            "Избрани сте за поръчка",
+            $"Клиентът ви избра за поръчка \"{job.Title}\". Моля потвърдете или откажете.");
+
+        foreach (var rejected in job.Interests.Where(i => i.Id != interestId))
+        {
+            await _notifications.CreateAsync(
+                rejected.HandymanId,
+                NotificationType.HandymanRejected,
+                "Не бяхте избрани",
+                $"За поръчка \"{job.Title}\" беше избран друг майстор.");
+        }
+
         return true;
     }
 
     public async Task<bool> ConfirmJobAsync(int jobId, string handymanUserId)
     {
-        var job = await _context.Jobs.FirstOrDefaultAsync(j => j.Id == jobId);
+        var job = await _context.Jobs
+            .Include(j => j.Client)
+            .FirstOrDefaultAsync(j => j.Id == jobId);
 
         if (job is null) return false;
         if (job.Status != JobStatus.AwaitingConfirmation) return false;
@@ -144,6 +164,13 @@ public class JobService : IJobService
         job.Status = JobStatus.InProgress;
         job.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        await _notifications.CreateAsync(
+            job.ClientId,
+            NotificationType.JobConfirmed,
+            "Поръчката ви е потвърдена",
+            $"Майсторът потвърди поръчка \"{job.Title}\". Работата е в процес.");
+
         return true;
     }
 
@@ -167,6 +194,13 @@ public class JobService : IJobService
         }
 
         await _context.SaveChangesAsync();
+
+        await _notifications.CreateAsync(
+            job.ClientId,
+            NotificationType.JobDeclined,
+            "Майсторът отказа поръчката",
+            $"Избраният майстор отказа поръчка \"{job.Title}\". Поръчката е отворена отново.");
+
         return true;
     }
 
@@ -181,6 +215,22 @@ public class JobService : IJobService
         job.Status = JobStatus.Completed;
         job.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
+
+        await _notifications.CreateAsync(
+            job.ClientId,
+            NotificationType.JobCompleted,
+            "Поръчката е завършена",
+            $"Поръчка \"{job.Title}\" беше маркирана като завършена.");
+
+        if (job.SelectedHandymanId is not null)
+        {
+            await _notifications.CreateAsync(
+                job.SelectedHandymanId,
+                NotificationType.JobCompleted,
+                "Поръчката е завършена",
+                $"Поръчка \"{job.Title}\" беше маркирана като завършена.");
+        }
+
         return true;
     }
 

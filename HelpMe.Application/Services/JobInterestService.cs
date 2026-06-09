@@ -8,10 +8,12 @@ namespace HelpMe.Application.Services;
 public class JobInterestService : IJobInterestService
 {
     private readonly IApplicationDbContext _context;
+    private readonly INotificationService _notifications;
 
-    public JobInterestService(IApplicationDbContext context)
+    public JobInterestService(IApplicationDbContext context, INotificationService notifications)
     {
         _context = context;
+        _notifications = notifications;
     }
 
     public async Task<JobInterestDto?> SubmitInterestAsync(string handymanUserId, int jobId, SubmitInterestDto dto)
@@ -40,6 +42,16 @@ public class JobInterestService : IJobInterestService
             .Include(i => i.Handyman)
                 .ThenInclude(h => h.User)
             .FirstOrDefaultAsync(i => i.Id == interest.Id);
+
+        if (saved?.Handyman?.User is not null)
+        {
+            var handymanName = $"{saved.Handyman.User.FirstName} {saved.Handyman.User.LastName}";
+            await _notifications.CreateAsync(
+                job.ClientId,
+                NotificationType.JobInterestReceived,
+                "Нов интерес към поръчката ви",
+                $"{handymanName} изрази интерес към \"{job.Title}\".");
+        }
 
         return saved is null ? null : ToDto(saved);
     }

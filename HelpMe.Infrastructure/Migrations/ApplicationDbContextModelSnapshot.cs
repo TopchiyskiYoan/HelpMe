@@ -286,6 +286,45 @@ namespace HelpMe.Infrastructure.Migrations
                     b.ToTable("JobInterests");
                 });
 
+            modelBuilder.Entity("HelpMe.Domain.Entities.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("HelpMe.Domain.Entities.Region", b =>
                 {
                     b.Property<int>("Id")
@@ -674,6 +713,17 @@ namespace HelpMe.Infrastructure.Migrations
                     b.Navigation("Handyman");
 
                     b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("HelpMe.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("HelpMe.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HelpMe.Domain.Entities.Review", b =>

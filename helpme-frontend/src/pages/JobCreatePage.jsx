@@ -1,100 +1,63 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api.js'
-
-const inp = {
-  padding: '11px 13px',
-  borderRadius: '8px',
-  border: '1px solid #fde68a',
-  background: '#fffbf0',
-  color: '#1c1917',
-  fontSize: '14px',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box',
-}
+import { t } from '../theme.js'
 
 const s = {
-  wrapper: { display: 'flex', justifyContent: 'center', flex: 1, padding: '2rem', background: '#fffbf0' },
+  wrapper: {
+    display: 'flex', justifyContent: 'center', flex: 1,
+    padding: '2rem', background: t.bg,
+  },
   card: {
-    width: '100%',
-    maxWidth: '560px',
-    padding: '32px 28px',
-    border: '1px solid #fde68a',
-    borderRadius: '16px',
-    background: '#fff',
-    textAlign: 'left',
-    boxShadow: '0 8px 32px rgba(217,119,6,0.14)',
+    width: '100%', maxWidth: '580px',
+    padding: '36px 32px',
+    border: `1px solid ${t.border}`,
+    borderRadius: t.radiusLg,
+    background: t.card, textAlign: 'left',
+    boxShadow: t.shadowMd,
+    alignSelf: 'flex-start',
   },
   title: {
     fontFamily: "'Syne', system-ui, sans-serif",
-    fontSize: '24px',
-    fontWeight: 800,
-    color: '#1c1917',
-    letterSpacing: '-0.03em',
-    marginBottom: '3px',
+    fontSize: '24px', fontWeight: 800, color: t.text,
+    letterSpacing: '-0.03em', marginBottom: '3px',
   },
-  subtitle: { fontSize: '13px', color: '#78350f', marginBottom: '20px' },
-  steps: { display: 'flex', gap: '6px', marginBottom: '24px' },
+  subtitle: { fontSize: '13px', color: t.textMuted, marginBottom: '24px' },
+  steps: { display: 'flex', gap: '6px', marginBottom: '28px' },
   step: (active, done) => ({
-    flex: 1,
-    height: '4px',
-    borderRadius: '2px',
-    background: done ? '#d97706' : active ? '#fde68a' : 'rgba(253,230,138,0.4)',
+    flex: 1, height: '3px', borderRadius: '2px',
+    background: done ? t.amber : active ? t.amberBorder : t.border,
     transition: 'background 0.2s',
   }),
-  field: { display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '14px' },
-  label: {
-    fontSize: '11px',
-    fontWeight: 600,
-    color: '#78350f',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-  },
-  input: inp,
-  textarea: { ...inp, resize: 'vertical', minHeight: '100px', fontFamily: 'inherit' },
-  select: { ...inp, cursor: 'pointer' },
-  row: { display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '20px' },
-  btnPrimary: {
-    padding: '10px 24px',
-    borderRadius: '8px',
-    border: 'none',
-    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
-    color: '#fff',
-    fontSize: '14px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: '0 3px 10px rgba(217,119,6,0.3)',
-  },
-  btnSecondary: {
-    padding: '10px 20px',
-    borderRadius: '8px',
-    border: '1px solid #fde68a',
-    background: 'transparent',
-    color: '#78350f',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: 'pointer',
-  },
+  stepLabels: { display: 'flex', gap: '6px', marginTop: '-18px', marginBottom: '24px' },
+  stepLabel: (active, done) => ({
+    flex: 1, fontSize: '11px', fontWeight: done || active ? 600 : 400,
+    color: done || active ? t.amberDark : t.textLight,
+    textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.04em',
+  }),
+  field: { marginBottom: '16px' },
+  label: { ...t.label },
+  input: { ...t.input },
+  textarea: { ...t.input, resize: 'vertical', minHeight: '110px', fontFamily: 'inherit' },
+  select: { ...t.input, cursor: 'pointer', appearance: 'auto' },
+  row: { display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '24px' },
+  btnPrimary: { ...t.btnPrimary, padding: '10px 24px' },
+  btnSecondary: { ...t.btnSecondary, padding: '10px 20px' },
   reviewRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '10px 0',
-    borderBottom: '1px solid #fde68a',
-    fontSize: '14px',
+    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+    padding: '12px 0', borderBottom: `1px solid ${t.border}`,
+    fontSize: '14px', gap: '1rem',
   },
-  reviewLabel: { color: '#78350f', fontWeight: 500 },
-  reviewValue: { color: '#1c1917', fontWeight: 600, textAlign: 'right', maxWidth: '55%' },
+  reviewLabel: { color: t.textMuted, fontWeight: 500, flexShrink: 0 },
+  reviewValue: { color: t.text, fontWeight: 600, textAlign: 'right' },
   error: {
-    fontSize: '13px',
-    color: '#dc2626',
-    marginBottom: '14px',
-    padding: '10px 13px',
-    background: '#fee2e2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
+    fontSize: '13px', color: t.redText, marginBottom: '16px',
+    padding: '11px 14px', background: t.redBg,
+    border: `1px solid ${t.redBorder}`, borderRadius: t.radius,
   },
 }
+
+const STEPS = ['Локация', 'Детайли', 'Преглед']
 
 export default function JobCreatePage() {
   const navigate = useNavigate()
@@ -116,6 +79,9 @@ export default function JobCreatePage() {
   const selectedCity = allCities.find(c => String(c.id) === String(form.cityId))
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
+
+  const focusIn = (e) => { e.target.style.borderColor = t.amber }
+  const focusOut = (e) => { e.target.style.borderColor = t.border }
 
   const goNext = () => {
     setError('')
@@ -151,13 +117,12 @@ export default function JobCreatePage() {
     }
   }
 
-  const STEPS = ['Локация', 'Детайли', 'Преглед']
-
   return (
     <div style={s.wrapper}>
       <div style={s.card}>
         <div style={s.title}>Нова поръчка</div>
         <div style={s.subtitle}>Стъпка {step} от 3 — {STEPS[step - 1]}</div>
+
         <div style={s.steps}>
           {[1, 2, 3].map(n => <div key={n} style={s.step(n === step, n < step)} />)}
         </div>
@@ -167,8 +132,9 @@ export default function JobCreatePage() {
         {step === 1 && (
           <>
             <div style={s.field}>
-              <label style={s.label}>Подкатегория</label>
-              <select style={s.select} value={form.subCategoryId} onChange={set('subCategoryId')}>
+              <label style={s.label}>Вид услуга</label>
+              <select style={s.select} value={form.subCategoryId} onChange={set('subCategoryId')}
+                onFocus={focusIn} onBlur={focusOut}>
                 <option value="">— изберете —</option>
                 {categories.map(cat => (
                   <optgroup key={cat.id} label={cat.name}>
@@ -181,7 +147,8 @@ export default function JobCreatePage() {
             </div>
             <div style={s.field}>
               <label style={s.label}>Населено място</label>
-              <select style={s.select} value={form.cityId} onChange={set('cityId')}>
+              <select style={s.select} value={form.cityId} onChange={set('cityId')}
+                onFocus={focusIn} onBlur={focusOut}>
                 <option value="">— изберете —</option>
                 {regions.map(r => (
                   <optgroup key={r.id} label={r.name}>
@@ -200,17 +167,20 @@ export default function JobCreatePage() {
             <div style={s.field}>
               <label style={s.label}>Заглавие</label>
               <input style={s.input} value={form.title} onChange={set('title')}
-                placeholder="напр. Смяна на кран в кухнята" />
+                placeholder="напр. Смяна на кран в кухнята"
+                onFocus={focusIn} onBlur={focusOut} />
             </div>
             <div style={s.field}>
               <label style={s.label}>Описание</label>
               <textarea style={s.textarea} value={form.description} onChange={set('description')}
-                placeholder="Опишете проблема, размерите, спешността..." />
+                placeholder="Опишете проблема, размерите, спешността..."
+                onFocus={focusIn} onBlur={focusOut} />
             </div>
             <div style={s.field}>
               <label style={s.label}>Примерен бюджет (лв., незадължително)</label>
               <input style={s.input} type="number" min="0" step="1" value={form.approximateBudget}
-                onChange={set('approximateBudget')} placeholder="напр. 150" />
+                onChange={set('approximateBudget')} placeholder="напр. 150"
+                onFocus={focusIn} onBlur={focusOut} />
             </div>
           </>
         )}
@@ -218,7 +188,7 @@ export default function JobCreatePage() {
         {step === 3 && (
           <div style={{ marginBottom: '8px' }}>
             {[
-              ['Подкатегория', selectedSub ? `${selectedSub.categoryName} › ${selectedSub.name}` : '—'],
+              ['Вид услуга', selectedSub ? `${selectedSub.categoryName} › ${selectedSub.name}` : '—'],
               ['Населено място', selectedCity?.name ?? '—'],
               ['Заглавие', form.title],
               ['Описание', form.description],
@@ -234,7 +204,7 @@ export default function JobCreatePage() {
 
         <div style={s.row}>
           {step > 1 && (
-            <button style={s.btnSecondary} onClick={() => setStep(p => p - 1)}>Назад</button>
+            <button style={s.btnSecondary} onClick={() => setStep(p => p - 1)}>← Назад</button>
           )}
           {step < 3 && (
             <button style={s.btnPrimary} onClick={goNext}>Напред →</button>

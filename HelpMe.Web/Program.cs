@@ -2,13 +2,16 @@ using HelpMe.Application.Interfaces;
 using HelpMe.Application.Services;
 using HelpMe.Domain.Entities;
 using HelpMe.Infrastructure.Data;
+using HelpMe.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +55,19 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Rate limiting — protect auth endpoints from brute-force
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("auth", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 10;
+        limiter.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        limiter.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 // DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -63,6 +79,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireNonAlphanumeric = true;
     options.Password.RequireDigit = true;
     options.Password.RequireUppercase = true;
+    options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.MaxValue;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
@@ -105,10 +123,12 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IRegionService, RegionService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IHandymanProfileService, HandymanProfileService>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddScoped<IJobInterestService, JobInterestService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
 var app = builder.Build();
@@ -136,9 +156,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

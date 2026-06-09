@@ -11,12 +11,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!token) return
     api.get('/auth/me')
-      .then(setUser)
+      .then(data => setUser({ ...data, role: data.role || '' }))
       .catch(() => {
         localStorage.removeItem('token')
         setToken(null)
       })
-            .finally(() => setLoading(false))
+      .finally(() => setLoading(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = (userData, jwtToken) => {

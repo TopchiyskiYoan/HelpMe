@@ -1,8 +1,10 @@
 using HelpMe.Application.DTOs;
+using HelpMe.Application.Interfaces;
 using HelpMe.Application.Services;
 using HelpMe.Domain.Entities;
 using HelpMe.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 
 namespace HelpMe.Tests.Services;
 
@@ -20,7 +22,8 @@ public class JobServiceTests
             .Options;
 
         _context = new ApplicationDbContext(options);
-        _service = new JobService(_context);
+        var notificationsMock = new Mock<INotificationService>();
+        _service = new JobService(_context, notificationsMock.Object);
     }
 
     [TearDown]

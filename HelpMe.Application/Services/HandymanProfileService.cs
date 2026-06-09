@@ -8,10 +8,12 @@ namespace HelpMe.Application.Services;
 public class HandymanProfileService : IHandymanProfileService
 {
     private readonly IApplicationDbContext _context;
+    private readonly INotificationService _notifications;
 
-    public HandymanProfileService(IApplicationDbContext context)
+    public HandymanProfileService(IApplicationDbContext context, INotificationService notifications)
     {
         _context = context;
+        _notifications = notifications;
     }
 
     public async Task<List<HandymanProfileDto>> GetAllAsync()
@@ -144,6 +146,24 @@ public class HandymanProfileService : IHandymanProfileService
 
         profile.IsVerified = approved;
         await _context.SaveChangesAsync();
+
+        if (approved)
+        {
+            await _notifications.CreateAsync(
+                userId,
+                NotificationType.VerificationApproved,
+                "Профилът ви е верифициран",
+                "Поздравления! Вашият профил беше одобрен. Вече можете да получавате поръчки.");
+        }
+        else
+        {
+            await _notifications.CreateAsync(
+                userId,
+                NotificationType.VerificationRejected,
+                "Верификацията е отказана",
+                "Съжаляваме, вашият профил не беше одобрен. Моля свържете се с поддръжката.");
+        }
+
         return true;
     }
 
@@ -152,10 +172,13 @@ public class HandymanProfileService : IHandymanProfileService
         UserId = h.UserId,
         FirstName = h.User?.FirstName ?? string.Empty,
         LastName = h.User?.LastName ?? string.Empty,
+        ProfilePictureUrl = h.User?.ProfilePictureUrl,
         Bio = h.Bio,
         YearsOfExperience = h.YearsOfExperience,
         IsActive = h.IsActive,
         IsVerified = h.IsVerified,
+        AverageRating = h.AverageRating,
+        ReviewCount = h.ReviewCount,
         SubCategories = h.SubCategories
             .Where(hs => hs.SubCategory is not null)
             .Select(hs => new SubCategoryDto

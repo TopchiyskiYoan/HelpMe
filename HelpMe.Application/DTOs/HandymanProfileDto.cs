@@ -7,10 +7,13 @@ public class HandymanProfileDto
     public string UserId { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
+    public string? ProfilePictureUrl { get; set; }
     public string? Bio { get; set; }
     public int YearsOfExperience { get; set; }
     public bool IsActive { get; set; }
     public bool IsVerified { get; set; }
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
     public List<SubCategoryDto> SubCategories { get; set; } = new();
     public List<CityDto> Cities { get; set; } = new();
 }

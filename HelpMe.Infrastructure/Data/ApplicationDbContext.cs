@@ -24,6 +24,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<JobInterest> JobInterests => Set<JobInterest>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ReviewResponse> ReviewResponses => Set<ReviewResponse>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -162,6 +163,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             .HasOne(rr => rr.Review)
             .WithOne(r => r.Response)
             .HasForeignKey<ReviewResponse>(rr => rr.ReviewId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Notification>()
+            .HasOne(n => n.User)
+            .WithMany()
+            .HasForeignKey(n => n.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

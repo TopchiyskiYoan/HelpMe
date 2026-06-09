@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -10,6 +10,13 @@ import HandymanFeedPage from './pages/HandymanFeedPage.jsx'
 import JobDetailPage from './pages/JobDetailPage.jsx'
 import PendingConfirmationsPage from './pages/PendingConfirmationsPage.jsx'
 import HandymanPublicProfilePage from './pages/HandymanPublicProfilePage.jsx'
+import HandymanListPage from './pages/HandymanListPage.jsx'
+import ProfilePage from './pages/ProfilePage.jsx'
+import NotFoundPage from './pages/NotFoundPage.jsx'
+import AdminUsersPage from './pages/AdminUsersPage.jsx'
+import AdminJobsPage from './pages/AdminJobsPage.jsx'
+import AdminReviewsPage from './pages/AdminReviewsPage.jsx'
+import AdminVerificationPage from './pages/AdminVerificationPage.jsx'
 
 function App() {
   return (
@@ -20,6 +27,10 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
 
         <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+
+        <Route path="/handymen" element={<ProtectedRoute roles={['Client', 'Administrator']}><HandymanListPage /></ProtectedRoute>} />
 
         <Route path="/jobs/create" element={
           <ProtectedRoute roles={['Client']}><JobCreatePage /></ProtectedRoute>
@@ -40,7 +51,20 @@ function App() {
           <ProtectedRoute><HandymanPublicProfilePage /></ProtectedRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/admin/users" element={
+          <ProtectedRoute roles={['Administrator']}><AdminUsersPage /></ProtectedRoute>
+        } />
+        <Route path="/admin/handymen/pending" element={
+          <ProtectedRoute roles={['Administrator']}><AdminVerificationPage /></ProtectedRoute>
+        } />
+        <Route path="/admin/jobs" element={
+          <ProtectedRoute roles={['Administrator']}><AdminJobsPage /></ProtectedRoute>
+        } />
+        <Route path="/admin/reviews" element={
+          <ProtectedRoute roles={['Administrator']}><AdminReviewsPage /></ProtectedRoute>
+        } />
+
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </div>
   )

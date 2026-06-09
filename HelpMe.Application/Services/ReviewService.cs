@@ -8,10 +8,12 @@ namespace HelpMe.Application.Services;
 public class ReviewService : IReviewService
 {
     private readonly IApplicationDbContext _context;
+    private readonly INotificationService _notifications;
 
-    public ReviewService(IApplicationDbContext context)
+    public ReviewService(IApplicationDbContext context, INotificationService notifications)
     {
         _context = context;
+        _notifications = notifications;
     }
 
     public async Task<ReviewDto?> CreateReviewAsync(string clientId, CreateReviewDto dto)
@@ -42,6 +44,12 @@ public class ReviewService : IReviewService
         await _context.SaveChangesAsync();
 
         await UpdateHandymanRatingAsync(job.SelectedHandymanId);
+
+        await _notifications.CreateAsync(
+            job.SelectedHandymanId,
+            NotificationType.ReviewReceived,
+            "Получихте нова оценка",
+            $"Клиент остави оценка {dto.Rating}/5 за завършена поръчка.");
 
         return await GetReviewDtoAsync(review.Id);
     }

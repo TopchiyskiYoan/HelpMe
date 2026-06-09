@@ -75,6 +75,9 @@ public class AuthService : IAuthService
         if (!await _userManager.CheckPasswordAsync(user, dto.Password))
             return AuthResult.Fail("INVALID_CREDENTIALS");
 
+        if (user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow)
+            return AuthResult.Fail("ACCOUNT_BANNED");
+
         var roles = await _userManager.GetRolesAsync(user);
         var token = _tokenService.GenerateToken(user, roles);
 
@@ -94,6 +97,8 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return null;
 
+        var roles = await _userManager.GetRolesAsync(user);
+
         return new UserDto
         {
             Id = user.Id,
@@ -102,7 +107,8 @@ public class AuthService : IAuthService
             Email = user.Email ?? string.Empty,
             PhoneNumber = user.PhoneNumber,
             ProfilePictureUrl = user.ProfilePictureUrl,
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            Role = roles.FirstOrDefault() ?? string.Empty
         };
     }
 }

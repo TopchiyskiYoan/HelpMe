@@ -2,97 +2,43 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { t } from '../theme.js'
 
 const s = {
   wrapper: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flex: 1,
-    padding: '2rem',
-    background: '#fffbf0',
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    flex: 1, padding: '2rem', background: t.bg, minHeight: 0,
   },
   card: {
-    width: '100%',
-    maxWidth: '400px',
-    padding: '32px 28px',
-    border: '1px solid #fde68a',
-    borderRadius: '16px',
-    background: '#fff',
-    boxShadow: '0 8px 32px rgba(217,119,6,0.14)',
-    textAlign: 'left',
+    width: '100%', maxWidth: '400px',
+    padding: '36px 32px',
+    border: `1px solid ${t.border}`,
+    borderRadius: t.radiusLg,
+    background: t.card,
+    boxShadow: t.shadowMd,
+  },
+  brand: {
+    fontFamily: "'Syne', system-ui, sans-serif",
+    fontSize: '15px', fontWeight: 800, color: t.amber,
+    letterSpacing: '-0.02em', marginBottom: '24px',
   },
   title: {
     fontFamily: "'Syne', system-ui, sans-serif",
-    fontSize: '26px',
-    fontWeight: 800,
-    color: '#1c1917',
-    letterSpacing: '-0.03em',
-    marginBottom: '4px',
+    fontSize: '26px', fontWeight: 800, color: t.text,
+    letterSpacing: '-0.03em', marginBottom: '4px',
   },
-  subtitle: {
-    fontSize: '13px',
-    color: '#78350f',
-    marginBottom: '24px',
-  },
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '5px',
-    marginBottom: '14px',
-  },
-  label: {
-    fontSize: '11px',
-    fontWeight: 600,
-    color: '#78350f',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-  },
-  input: {
-    padding: '11px 13px',
-    borderRadius: '8px',
-    border: '1px solid #fde68a',
-    background: '#fffbf0',
-    color: '#1c1917',
-    fontSize: '14px',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-  },
-  btn: {
-    width: '100%',
-    padding: '12px',
-    borderRadius: '9px',
-    border: 'none',
-    background: 'linear-gradient(135deg, #d97706, #f59e0b)',
-    color: '#fff',
-    fontSize: '15px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    marginTop: '8px',
-    boxShadow: '0 4px 14px rgba(217,119,6,0.35)',
-    letterSpacing: '0.01em',
-  },
+  subtitle: { fontSize: '13.5px', color: t.textMuted, marginBottom: '28px' },
+  field: { marginBottom: '16px' },
+  label: { ...t.label },
+  input: { ...t.input },
+  btn: { ...t.btnPrimary, width: '100%', padding: '12px', fontSize: '15px', marginTop: '8px' },
   error: {
-    fontSize: '13px',
-    color: '#dc2626',
-    marginBottom: '14px',
-    padding: '10px 13px',
-    background: '#fee2e2',
-    border: '1px solid #fecaca',
-    borderRadius: '8px',
+    fontSize: '13px', color: t.redText, marginBottom: '16px',
+    padding: '11px 14px', background: t.redBg,
+    border: `1px solid ${t.redBorder}`, borderRadius: t.radius,
   },
-  footer: {
-    marginTop: '20px',
-    fontSize: '13px',
-    color: '#78350f',
-    textAlign: 'center',
-  },
-  footerLink: {
-    color: '#d97706',
-    fontWeight: 600,
-    textDecoration: 'none',
-  },
+  footer: { marginTop: '24px', fontSize: '13px', color: t.textMuted, textAlign: 'center' },
+  footerLink: { color: t.amberDark, fontWeight: 600, textDecoration: 'none' },
 }
 
 export default function LoginPage() {
@@ -111,7 +57,9 @@ export default function LoginPage() {
       login({ id: data.userId, firstName: data.firstName, lastName: data.lastName, email: data.email, role: data.role }, data.token)
       navigate('/')
     } catch (err) {
-      setError(err.message || 'Грешен email или парола.')
+      const msg = err.message || ''
+      if (msg.includes('заблокиран') || msg.includes('BANNED')) setError('Акаунтът ви е временно блокиран. Свържете се с поддръжката.')
+      else setError('Невалиден email или парола.')
     } finally {
       setLoading(false)
     }
@@ -120,22 +68,29 @@ export default function LoginPage() {
   return (
     <div style={s.wrapper}>
       <div style={s.card}>
+        <div style={s.brand}>HelpMe</div>
         <div style={s.title}>Добре дошли</div>
-        <div style={s.subtitle}>Влезте в акаунта си</div>
+        <div style={s.subtitle}>Влезте в акаунта си, за да продължите</div>
         {error && <div style={s.error}>{error}</div>}
         <form onSubmit={handleSubmit}>
           <div style={s.field}>
-            <label style={s.label}>Email</label>
+            <label style={s.label}>Email адрес</label>
             <input style={s.input} type="email" required value={form.email}
+              placeholder="you@example.com"
+              onFocus={e => e.target.style.borderColor = t.amber}
+              onBlur={e => e.target.style.borderColor = t.border}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
           </div>
           <div style={s.field}>
             <label style={s.label}>Парола</label>
             <input style={s.input} type="password" required value={form.password}
+              placeholder="••••••••"
+              onFocus={e => e.target.style.borderColor = t.amber}
+              onBlur={e => e.target.style.borderColor = t.border}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
           </div>
           <button style={s.btn} type="submit" disabled={loading}>
-            {loading ? 'Зареждане...' : 'Вход →'}
+            {loading ? 'Зареждане...' : 'Вход'}
           </button>
         </form>
         <div style={s.footer}>
